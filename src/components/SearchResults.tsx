@@ -78,7 +78,7 @@ const SearchResults: React.FC = () => {
     const fetchData = async () => {
       setIsLoading(true);
       const data = await searchUser(query);
-       if (data === undefined) return;
+      if(data === null) return; 
       console.log('❤️❤️', data);
       // Replace this with actual API call
 

@@ -17,8 +17,8 @@ export default defineConfig({
         'safari-pinned-tab.svg',
       ],
       manifest: {
-        name: 'Vite PWA Project',
-        short_name: 'Vite PWA Project',
+        name: 'Appointment',
+        short_name: 'appointment',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         start_url: '/',
@@ -53,6 +53,40 @@ export default defineConfig({
             sizes: '180x180',
             type: 'image/png',
             purpose: 'any maskable',
+          },
+        ],
+        description:
+          'Pwa Setup Project Where you can send notifications and also click pictures record vedio and install the application in the mobile devices',
+        screenshots: [
+          {
+            src: '1.png',
+            sizes: '640x480',
+            type: 'image/png',
+            form_factor: 'narrow',
+          },
+          {
+            src: '2.png',
+            sizes: '640x480',
+            type: 'image/png',
+            form_factor: 'narrow',
+          },
+          {
+            src: '3.png',
+            sizes: '640x480',
+            type: 'image/png',
+            form_factor: 'narrow',
+          },
+          {
+            src: '4.png',
+            sizes: '640x480',
+            type: 'image/png',
+            form_factor: 'narrow',
+          },
+          {
+            src: '5.png',
+            sizes: '640x480',
+            type: 'image/png',
+            form_factor: 'narrow',
           },
         ],
       },

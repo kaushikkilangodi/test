@@ -10,7 +10,11 @@ import {
   handleAppInstalled,
   handleInstallClick,
 } from '../features/install/InstallPage';
-import * as Realm from 'realm-web';
+// import * as Realm from 'realm-web';
+import Row from '../components/Row';
+import { useLoginApi } from '../services/useLoginApi';
+// import { app } from '../constants';
+// import { searchDoctors } from '../services/realmServices';
 
 const First = styled.div`
   background-color: lightgray;
@@ -51,29 +55,25 @@ const Note = styled.div`
   font-size: 16px;
   color: #000;
 `;
-
-
-const APP_ID = 'exelonwebapp-ixfnzgz';
-// const API_KEY = '2T3SpSAunEzrSWM3sSUJXCG7abmmDC67DHAA3URnspcXfSChdD5Nc1MSiBqAbNLc';
-const app = new Realm.App({ id: APP_ID });
+// interface User {
+//   id?: string;
+// }
 
 const InstallPage = () => {
   const [showInstallPrompt, setShowInstallPrompt] = useState(true);
   const [, setShowLogin] = useState(false);
   const [isInstallButtonClicked, setIsInstallButtonClicked] = useState(false);
-  const [isIos, setIsIos] = useState(false);
-    const [apiKey, setApikey] = useState('');
-    const [user, setUser] = useState({});
+  // const [isIos, setIsIos] = useState(false);
+  const [apiKey, setApikey] = useState('');
+  const {login} = useLoginApi();
 
-
-  // const navigate = useNavigate();
   const [deferredPrompt, setDeferredPrompt] = useState<DeferredPrompt | null>(
     null
   );
 
   useEffect(() => {
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    setIsIos(/iphone|ipad|ipod/.test(userAgent));
+    // const userAgent = window.navigator.userAgent.toLowerCase();
+    // setIsIos(/iphone|ipad|ipod/.test(userAgent));
 
     const beforeInstallPromptHandler = (e: Event) =>
       handleBeforeInstallPrompt(e, setDeferredPrompt, setShowInstallPrompt);
@@ -91,36 +91,11 @@ const InstallPage = () => {
     };
   }, []);
 
-  // const handleLogin = () => {
-  //   navigate({ to: '/appointments' });
-  // };
-
-
-  const onSubmits = (e:React.SyntheticEvent) => {
-    // navigate({ to: '/appointments' });
+  const handleLogin = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     console.log(apiKey);
-
-    const loginWithApiKey = async () => {
-      const credentials = Realm.Credentials.apiKey(apiKey);
-      try {
-        const users = await app.logIn(credentials);
-        console.log(users);
-        setUser(users);
-      } catch (error) {
-        console.error('Failed to log in', error);
-      }
-    };
-
-    loginWithApiKey();
-    console.log('at initial render', user);
+    login(apiKey);
   };
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      setApikey(e.target.value);
-    };
-
-  //showLogin
   return (
     <>
       <First>
@@ -129,104 +104,70 @@ const InstallPage = () => {
       </First>
       <Second>
         {showInstallPrompt && (
-          <>
-            {isIos ? (
-              <>
-                <LoadingButton
-                  variant="outlined"
-                  loading={isInstallButtonClicked}
-                  loadingIndicator="Loading…"
-                  sx={{
-                    color: isInstallButtonClicked ? 'black' : 'white',
-                    backgroundColor: isInstallButtonClicked ? 'white' : 'black',
-                    width: '229px',
-                    height: '60px',
-                    borderRadius: '12px',
-                    fontSize: '18px',
-                    fontWeight: '700',
-                    textAlign: 'center',
-                    font: 'Helvetica',
-                    ':hover': { backgroundColor: 'black', color: 'white' },
-                  }}
-                  onClick={() => {
-                    handleInstallClick(
-                      deferredPrompt,
-                      setShowInstallPrompt,
-                      setShowLogin,
-                      setDeferredPrompt,
-                      setIsInstallButtonClicked
-                    );
-                    setIsInstallButtonClicked(true);
-                  }}
-                  size="large"
-                >
-                  Install Now
-                </LoadingButton>
-                <Note>Note: To proceed please install first</Note>
-              </>
-            ) : (
-              <>
-                <LoadingButton
-                  variant="outlined"
-                  loading={isInstallButtonClicked}
-                  loadingIndicator="Loading…"
-                  sx={{
-                    color: isInstallButtonClicked ? 'black' : 'white',
-                    backgroundColor: isInstallButtonClicked ? 'white' : 'black',
-                    width: '229px',
-                    height: '60px',
-                    borderRadius: '12px',
-                    fontSize: '18px',
-                    fontWeight: '700',
-                    textAlign: 'center',
-                    font: 'Helvetica',
-                    ':hover': { backgroundColor: 'black', color: 'white' },
-                  }}
-                  onClick={() => {
-                    handleInstallClick(
-                      deferredPrompt,
-                      setShowInstallPrompt,
-                      setShowLogin,
-                      setDeferredPrompt,
-                      setIsInstallButtonClicked
-                    );
-                    setIsInstallButtonClicked(true);
-                  }}
-                  size="large"
-                >
-                  Install Now
-                </LoadingButton>
-                <Note>Note: To proceed please install first</Note>
-              </>
-            )}
-          </>
+          <div>
+            <LoadingButton
+              variant="outlined"
+              loading={isInstallButtonClicked}
+              loadingIndicator="Loading…"
+              sx={{
+                color: isInstallButtonClicked ? 'black' : 'white',
+                backgroundColor: isInstallButtonClicked ? 'white' : 'black',
+                width: '229px',
+                height: '60px',
+                borderRadius: '12px',
+                fontSize: '18px',
+                fontWeight: '700',
+                textAlign: 'center',
+                font: 'Helvetica',
+                ':hover': { backgroundColor: 'black', color: 'white' },
+              }}
+              onClick={() => {
+                handleInstallClick(
+                  deferredPrompt,
+                  setShowInstallPrompt,
+                  setShowLogin,
+                  setDeferredPrompt,
+                  setIsInstallButtonClicked
+                );
+                setIsInstallButtonClicked(true);
+              }}
+              size="large"
+            >
+              Install Now
+            </LoadingButton>
+            <Note>Note: To proceed please install first</Note>
+          </div>
         )}
 
-        {!showInstallPrompt && (
-          <>
-            <form onSubmit={onSubmits}>
-              <Input
-                label="key"
-                name="apiKey"
-                placeholder="Enter the key"
-                value={apiKey}
-                onChange={handleChange}
-              />
-              <Button
-                type="submit"
-                variant="outlined"
-                sx={{
-                  color: 'white',
-                  backgroundColor: '#5A9EEE',
+        {showInstallPrompt && (
+          <div>
+            <form onSubmit={handleLogin}>
+              <Row $contentposition="center">
+                <Input
+                  label="key"
+                  name="apiKey"
+                  placeholder="Enter the key"
+                  value={apiKey}
+                  onChange={(e) => setApikey(e.target.value)}
+                />
+              </Row>
+              <Row $contentposition="center">
+                <Button
+                  type="submit"
+                  variant="outlined"
+                  sx={{
+                    color: 'white',
+                    backgroundColor: '#5A9EEE',
 
-                  ':hover': { backgroundColor: '#5A9EEE', color: 'white' },
-                }}
-                // onClick={handleLogin}
-              >
-                LOGIN
-              </Button>
+                    ':hover': { backgroundColor: '#5A9EEE', color: 'white' },
+                  }}
+                  // onClick={handleLogin}
+                >
+                  LOGIN
+                </Button>
+              </Row>
             </form>
-          </>
+          </div>
         )}
       </Second>
     </>

@@ -15,6 +15,7 @@ import PageNotFound from './components/PageNotFound';
 import SearchResults from './components/SearchResults';
 import AppointmentInfo from './features/appointment/AppointmentInfo';
 import Chat from './pages/ChatPage';
+// import Dum from './pages/Dum';
 // import ChatPage from './pages/ChatPage';
 // import EditContact from './features/contact/EditContact';
 
@@ -108,6 +109,7 @@ const pageNotFoundRoute = createRoute({
   path: '/*',
   component: PageNotFound,
 });
+
 
 export const routeTree = rootRoute.addChildren([
   indexRoute,

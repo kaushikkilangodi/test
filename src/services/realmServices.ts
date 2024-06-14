@@ -1,9 +1,6 @@
-const APP_ID = 'exelonwebapp-ixfnzgz';
-const app = new Realm.App({ id: APP_ID });
-import * as Realm from "realm-web";
+import { app } from '../constants';
 
-async function createUser(userData:object) {
-
+async function createUser(userData: object) {
   try {
     const user = app.currentUser;
      if (user === null) return;
@@ -14,13 +11,12 @@ async function createUser(userData:object) {
 
     const doctor = await doctorCollection.findOne();
     const doctors = doctor._id.toString();
-    console.log("doctor",doctors);
+    console.log('doctor', doctors);
 
     userData = {
       ...userData,
       doctor: doctors,
-
-    }
+    };
 
     console.log('doctorCollection created successfully:', doctor);
     await usersCollection.insertOne(userData);
@@ -31,10 +27,10 @@ async function createUser(userData:object) {
   }
 }
 
-async function searchUser(searchQuery:string) {
+async function searchUser(searchQuery: string) {
   try {
     const user = app.currentUser;
-    if(user===null) return;
+    if (user === null) return null;
     console.log('Search..........', user);
 
     const mongodb = user.mongoClient('mongodb-atlas');
@@ -46,6 +42,30 @@ async function searchUser(searchQuery:string) {
       });
 
       console.log('search result', result);
+      // console.log(result[0]._id.toString());
+      return result;
+    } catch (error) {
+      console.error('Error while performing regex search:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error while performing lookup function:', error);
+    throw error;
+  }
+}
+async function searchDoctors(id: string) {
+  try {
+    const user = app.currentUser;
+    if (user === null) return null;
+    console.log('Search..........', user);
+    const mongodb = user.mongoClient('mongodb-atlas');
+    const usersCollection = mongodb.db('user-account').collection('Doctors');
+    const pattern = id;
+    try {
+      const result = await usersCollection.find({ loginKey: pattern });
+
+      console.log('search result', result);
+      // console.log(result[0]._id.toString());
       return result;
     } catch (error) {
       console.error('Error while performing regex search:', error);
@@ -57,4 +77,4 @@ async function searchUser(searchQuery:string) {
   }
 }
 
-export { createUser, searchUser };
+export { createUser, searchUser, searchDoctors };

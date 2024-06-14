@@ -62,6 +62,7 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
             >
               {isLoading ? '' : confirmText}
             </Button>
+
             <Button
               onClick={closeModal}
               variant="outlined"
