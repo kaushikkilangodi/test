@@ -56,7 +56,7 @@ export default defineConfig({
           },
         ],
         description:
-          'Pwa Setup Project Where you can send notifications and also click pictures record vedio and install the application in the mobile devices',
+       'HealthConnect simplifies doctor appointment scheduling with an easy-to-use platform. Book, reschedule, and cancel appointments effortlessly. Browse detailed profiles and reviews to find the best providers. Receive timely reminders, store medical records securely, and access telehealth services. Experience hassle-free healthcare with HealthConnect!',
         screenshots: [
           {
             src: '1.png',
