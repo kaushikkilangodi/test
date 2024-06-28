@@ -287,14 +287,14 @@ function ChatPage() {
     null
   );
   const [isCameraOpen, setIsCameraOpen] = useState(false);
-  const [, setCapturedMedia] = useState<string | null>(null);
+  const [capturedMedia, setCapturedMedia] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [recording, setRecording] = useState<boolean>(false);
   const [recordingStartTime, setRecordingStartTime] = useState<number | null>(
     null
   );
   const [recordingDuration, setRecordingDuration] = useState<string>('00:00');
-  const [, setFilePreview] = useState<string | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -329,7 +329,7 @@ function ChatPage() {
         ...messages,
         {
           text: newMessage,
-          sender: 'user' as const,
+          sender: 'user',
           time: new Date().toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
@@ -358,7 +358,7 @@ function ChatPage() {
       recorder.onstop = () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/mpeg-3' });
         const audioUrl = URL.createObjectURL(audioBlob);
-        const newMessages: (Message | { audioUrl: string; sender: 'user'; time: string })[] = [
+        const newMessages = [
           ...messages,
           {
             audioUrl,
@@ -387,9 +387,22 @@ function ChatPage() {
     setIsCameraOpen(true);
   };
 
-  const handleSwitchCamera = () => {
-    setFacingMode((prevMode) => (prevMode === 'user' ? 'environment' : 'user'));
-  };
+ const handleSwitchCamera = async () => {
+   if (isCameraOpen) {
+     const stream = await navigator.mediaDevices.getUserMedia({
+       video: { facingMode: facingMode === 'user' ? 'environment' : 'user' },
+     });
+
+     if (videoRef.current) {
+       videoRef.current.srcObject = stream;
+       mediaStreamRef.current = stream;
+       setFacingMode((prevMode) =>
+         prevMode === 'user' ? 'environment' : 'user'
+       );
+     }
+   }
+ };
+
 
   const handleCapturePhoto = async () => {
     if (videoRef.current) {
@@ -402,7 +415,7 @@ function ChatPage() {
         const dataUrl = canvas.toDataURL('image/jpeg');
         setCapturedMedia(dataUrl);
         setIsCameraOpen(false);
-        const newMessages: (Message | { image: string; sender: "user" | "system"; time: string })[] = [
+        const newMessages = [
           ...messages,
           {
             image: dataUrl,
@@ -434,7 +447,7 @@ function ChatPage() {
         const videoUrl = URL.createObjectURL(videoBlob);
         setCapturedMedia(videoUrl);
         setIsCameraOpen(false);
-        const newMessages: (Message | { videoUrl: string; sender: "user"; time: string })[] = [
+        const newMessages = [
           ...messages,
           {
             videoUrl,
@@ -497,7 +510,7 @@ function ChatPage() {
 const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
   if (file) {
-    const newMessages: (Message | { file: File; sender: "user" | "system"; time: string })[] = [
+    const newMessages = [
       ...messages,
       {
         file,
@@ -671,13 +684,21 @@ const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
             {!recording && (
               <>
                 <CaptureButton onClick={handleCapturePhoto}>
-                  <PanoramaFishEyeOutlinedIcon
-                    style={{ color: 'white', fontSize: '70px' }}
+                  <CameraAltOutlinedIcon
+                    style={{
+                      color: 'white',
+                      fontSize: '60px',
+                      marginBottom: '40px',
+                    }}
                   />
                 </CaptureButton>
                 <RecordButton onClick={handleStartRecording}>
                   <RadioButtonUncheckedIcon
-                    style={{ color: 'white', fontSize: '40px' }}
+                    style={{
+                      color: 'white',
+                      fontSize: '40px',
+                      marginBottom: '30px',
+                    }}
                   />
                 </RecordButton>
               </>
@@ -685,7 +706,11 @@ const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
             {recording && (
               <StopButton onClick={handleStopRecording}>
                 <RadioButtonCheckedIcon
-                  style={{ color: 'red', fontSize: '40px' }}
+                  style={{
+                    color: 'red',
+                    fontSize: '60px',
+                    marginRight: '200px',
+                  }}
                 />
               </StopButton>
             )}
