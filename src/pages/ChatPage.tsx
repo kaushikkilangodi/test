@@ -287,14 +287,14 @@ function ChatPage() {
     null
   );
   const [isCameraOpen, setIsCameraOpen] = useState(false);
-  const [capturedMedia, setCapturedMedia] = useState<string | null>(null);
+  const [, setCapturedMedia] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [recording, setRecording] = useState<boolean>(false);
   const [recordingStartTime, setRecordingStartTime] = useState<number | null>(
     null
   );
   const [recordingDuration, setRecordingDuration] = useState<string>('00:00');
-  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [, setFilePreview] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -329,7 +329,7 @@ function ChatPage() {
         ...messages,
         {
           text: newMessage,
-          sender: 'user',
+          sender: 'user' as const,
           time: new Date().toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
@@ -358,11 +358,11 @@ function ChatPage() {
       recorder.onstop = () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/mpeg-3' });
         const audioUrl = URL.createObjectURL(audioBlob);
-        const newMessages = [
+        const newMessages: (Message | { audioUrl: string; sender: "user" | "system"; time: string; })[] = [
           ...messages,
           {
             audioUrl,
-            sender: 'user',
+            sender: 'user' as const,
             time: new Date().toLocaleTimeString([], {
               hour: '2-digit',
               minute: '2-digit',
@@ -415,11 +415,11 @@ function ChatPage() {
         const dataUrl = canvas.toDataURL('image/jpeg');
         setCapturedMedia(dataUrl);
         setIsCameraOpen(false);
-        const newMessages = [
+        const newMessages: (Message | { image: string; sender: 'user' | 'system'; time: string })[] = [
           ...messages,
           {
             image: dataUrl,
-            sender: 'user',
+            sender: 'system',
             time: new Date().toLocaleTimeString([], {
               hour: '2-digit',
               minute: '2-digit',
@@ -447,7 +447,7 @@ function ChatPage() {
         const videoUrl = URL.createObjectURL(videoBlob);
         setCapturedMedia(videoUrl);
         setIsCameraOpen(false);
-        const newMessages = [
+        const newMessages: (Message | { videoUrl: string; sender: "user" | "system"; time: string })[] = [
           ...messages,
           {
             videoUrl,
@@ -510,7 +510,7 @@ function ChatPage() {
 const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
   const file = event.target.files?.[0];
   if (file) {
-    const newMessages = [
+    const newMessages: (Message | { file: File; sender: "user" | "system"; time: string })[] = [
       ...messages,
       {
         file,
