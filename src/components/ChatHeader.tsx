@@ -1,120 +1,106 @@
 import React, { useState } from 'react';
-import {  IoArrowUp, IoArrowDown } from 'react-icons/io5';
+import { IoArrowUp, IoArrowDown } from 'react-icons/io5';
 import AppBar from '@mui/material/AppBar';
-import Toolbar from '@mui/material/Toolbar';
 import InputBase from '@mui/material/InputBase';
-// import SearchIcon from '@mui/icons-material/Search';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import { styled } from '@mui/material/styles';
 import IconButton from '@mui/material/IconButton';
 import Modal from './Modal';
 import Calendar from './Calendar';
 import KeyboardBackspaceOutlinedIcon from '@mui/icons-material/KeyboardBackspaceOutlined';
-import { CiSearch } from 'react-icons/ci';
 
 
-
+const CustomAppBar = styled(AppBar)({
+  boxShadow: 'none',
+  width: '100%',
+  maxWidth: '400px',
+  height: '80px',
+  position: 'fixed',
+  marginTop: '20px',
+  left: '50%',
+  transform: 'translate(-50%)',
+  padding: '0px 10px',
+  transition: 'all 0.5s',
+  
+});
 const Search = styled('div')(({ theme }) => ({
   borderRadius: theme.shape.borderRadius,
   height: '40px',
-
   backgroundColor: '#D9D9D9',
   display: 'flex',
-
-  // '&:hover': {
-  //   backgroundColor: '#D9D9D9',
-  // },
-
-  marginLeft: 0,
+  
+  // marginLeft: 0,
   width: '100%',
   [theme.breakpoints.up('sm')]: {
     marginLeft: theme.spacing(0),
-    width: '100%',
   },
 }));
 
-// Remove the declaration and assignment of StyledIconButton
-
-const SearchIconWrapper = styled('div')`
-  color: black;
+const StyledInputBase = styled(InputBase)<{ isDisabled: boolean }>`
+  color: '#000';
+  width: 100%;
   height: 100%;
-  display:flex;
-  cursor: pointer;
-  gap:0.5px;  
- 
+  padding: 10px 10px 10px 10px;
+  ${({ isDisabled }) => isDisabled && `background-color: #ddd;`}
 `;
 
-const StyledInputBase = styled(InputBase)`
-  color: '#000';
-  width: 80%;
-  height: 100%;
-  padding:10px 0px 10px 10px;
-`
+interface HeaderProps {
+  isSearchDisabled: boolean;
+  setIsVisible: (isVisible: boolean) => void;
+}
 
-
-
-const Header = () => {
+const Header = ({ isSearchDisabled, setIsVisible }:HeaderProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [scrollTop, setScrollTop] = useState(0);
-
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(event.target.value);
   };
+
   const handleScrollUp = () => {
     setScrollTop(scrollTop - 100);
-console.log('scrollingdown')  
-};
+    console.log('scrolling down');
+  };
 
   const handleScrollDown = () => {
     setScrollTop(scrollTop + 100);
-    console.log('scrollingup')
+    console.log('scrolling up');
   };
 
-  const [isVisible, setIsVisible] = useState(true);
-
-  const handleClick = () => {
-    console.log("clicked")
-    setIsVisible(!isVisible);
-  };
 
   return (
-    <AppBar position="static" color="transparent" style={{ boxShadow: 'none' }}>
-      <CiSearch
-        onClick={() => {
-          handleClick();
-        }}
-      />
-      <Toolbar sx={isVisible ? { display: 'none' } : { display: 'block' }}>
-        <Search>
-          <KeyboardBackspaceOutlinedIcon style={{marginTop:'11px'}}/>
-          <StyledInputBase
-            placeholder="Search chat..."
-            value={searchQuery}
-            onChange={handleSearchChange}
-            inputProps={{ 'aria-label': 'search' }}
-          />
-          <SearchIconWrapper>
-            <Modal>
-              <Modal.Open opens="calendar">
-                <IconButton aria-label="calendar">
-                  <CalendarTodayIcon fontSize="inherit" />
-                </IconButton>
-              </Modal.Open>
-              <Modal.Window name="calendar">
-                <Calendar />
-              </Modal.Window>
-            </Modal>
-            <IconButton aria-label="up" onClick={handleScrollUp}>
-              <IoArrowUp />
+    <CustomAppBar position="fixed" color="transparent">
+      <Search>
+        <IconButton>
+          <KeyboardBackspaceOutlinedIcon onClick={() => setIsVisible(true)} />
+        </IconButton>
+        <StyledInputBase
+          placeholder="Search chat..."
+          value={searchQuery}
+          onChange={handleSearchChange}
+          inputProps={{ 'aria-label': 'search' }}
+          fullWidth
+          isDisabled={isSearchDisabled}
+        />
+        <Modal>
+          <Modal.Open opens="calendar">
+            <IconButton aria-label="calendar">
+              <CalendarTodayIcon fontSize="inherit" />
             </IconButton>
-            <IconButton aria-label="down" onClick={handleScrollDown}>
-              <IoArrowDown />
-            </IconButton>
-          </SearchIconWrapper>
-        </Search>
-      </Toolbar>
-    </AppBar>
+          </Modal.Open>
+          <Modal.Window name="calendar">
+            <Calendar />
+          </Modal.Window>
+        </Modal>
+        <IconButton aria-label="up" onClick={handleScrollUp}>
+          <IoArrowUp />
+        </IconButton>
+        <IconButton aria-label="down" onClick={handleScrollDown}>
+          <IoArrowDown />
+        </IconButton>
+      </Search>
+    </CustomAppBar>
   );
 };
 
 export default Header;
+

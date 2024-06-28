@@ -15,9 +15,8 @@ import PageNotFound from './components/PageNotFound';
 import SearchResults from './components/SearchResults';
 import AppointmentInfo from './features/appointment/AppointmentInfo';
 import Chat from './pages/ChatPage';
-// import Dum from './pages/Dum';
-// import ChatPage from './pages/ChatPage';
-// import EditContact from './features/contact/EditContact';
+// import { displayContacts } from './services/realmServices';
+import { SearchParams } from './components/SearchResults';
 
 const rootRoute = createRootRoute({
   component: Root,
@@ -76,7 +75,12 @@ const slotsRoute = createRoute({
 });
 const createAppointmentRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/createAppointment',
+  path: '/createAppointment/$id',
+  component: CreateAppointment,
+});
+const editAppointmentRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/editAppointment/$id',
   component: CreateAppointment,
 });
 const contactsRoute = createRoute({
@@ -86,13 +90,18 @@ const contactsRoute = createRoute({
 });
 const editcontactRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/editcontact',
+  path: '/editcontact/$id',
   component: NewContact,
 });
-const searchRoute = createRoute({
+export const searchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/search',
   component: SearchResults,
+  validateSearch: (search: Record<string, unknown>): SearchParams => {
+    return {
+      query: (search.query as string),
+    };
+  },
 });
 const appointmentinfoRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -101,15 +110,16 @@ const appointmentinfoRoute = createRoute({
 });
 const chatpageRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/chatpage',
+  path: '/chatpage/$chatpage',
   component: Chat,
+  // loader: ({ params }) => displayContacts(params.chatpage),
 });
+
 const pageNotFoundRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/*',
   component: PageNotFound,
 });
-
 
 export const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -129,4 +139,5 @@ export const routeTree = rootRoute.addChildren([
   appointmentinfoRoute,
   chatpageRoute,
   pageNotFoundRoute,
+  editAppointmentRoute,
 ]);

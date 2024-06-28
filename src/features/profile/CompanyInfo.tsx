@@ -1,8 +1,10 @@
-import { useState, ChangeEvent, FormEvent } from 'react';
+import { useState, ChangeEvent, FormEvent, useEffect } from 'react';
 import styled from 'styled-components';
 import Input from '../../components/Input'; // Importing your custom Input component
 import { Button } from '@mui/material';
 import Row from '../../components/Row';
+import { useUser } from '../../context/userContext';
+// import { User } from '../../services/types'; // Adjust the path as necessary
 
 interface FormData {
   name: string;
@@ -19,6 +21,7 @@ const Container = styled.div`
 `;
 
 export default function NewContact() {
+  const { user } = useUser();
   const [formData, setFormData] = useState<FormData>({
     name: '',
     phone: '',
@@ -27,10 +30,22 @@ export default function NewContact() {
     city: '',
     pinCode: '',
   });
-  const handleSave = () => {
-    localStorage.setItem('formData', JSON.stringify(formData));
-    window.location.href = '/';
-  };
+
+  // Populate form data if user has company information
+  useEffect(() => {
+    if (user && user.companyName && user.companyAddress) {
+      setFormData({
+        name: user.companyName,
+        phone: user.mobile, 
+        addressLine1: user.companyAddress.line1,
+        addressLine2: user.companyAddress.line2,
+        city: user.companyAddress.city,
+        pinCode: user.companyAddress.pinCode,
+      });
+    }
+  }, [user]);
+
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prevFormData) => ({
@@ -94,16 +109,27 @@ export default function NewContact() {
         <Input
           type="text"
           name="pinCode"
-          placeholder="Enter pincode Here"
+          placeholder="Enter Pincode Here"
           value={formData.pinCode}
           onChange={handleChange}
           label="Pin Code"
         />
         <Row $contentposition="center">
           <Button
-            onClick={handleSave}
-            variant="contained"
-            sx={{ color: 'white' }}
+            variant="outlined"
+            sx={{
+              width: '172px',
+              borderRadius: '12px',
+              height: '53px',
+              boxShadow: ' 0 4px 4px 0 rgba(0, 0, 0, 0.25)',
+              backgroundColor: '#5a9eee',
+              color: 'white',
+              textTransform: 'none',
+              fontSize: '25px',
+              alignItems: 'center',
+              fontWeight: '700',
+            }}
+            type="submit"
           >
             Save
           </Button>

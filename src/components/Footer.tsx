@@ -7,7 +7,7 @@ import { AiOutlineSetting } from 'react-icons/ai';
 
 const StyledBottomNav = styled(BottomNavigation)(() => ({
   width: '100%',
-  maxWidth: '425px',
+  maxWidth: '440px',
   height: '80px',
   position: 'fixed',
   bottom: 0,

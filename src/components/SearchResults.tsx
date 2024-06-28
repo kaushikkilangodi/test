@@ -1,15 +1,21 @@
-// SearchResults.tsx
-
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from '@tanstack/react-router';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import styled from 'styled-components';
-// import UserAvatar from './UserAvatar';
+import UserAvatar from './UserAvatar';
 import Row from './Row';
 import { Button } from '@mui/material';
 import { searchUser } from '../services/realmServices';
+import { User } from '../services/types';
+import Loader from './Loader';
+import { searchRoute } from '../routes';
+import { usePreviousPath } from '../context/PreviousPath';
+
+export type SearchParams = {
+  query: string;
+};
 
 const Container = styled.div`
-  padding: 20px;
+  padding: 15px;
 `;
 
 const NoResults = styled.div`
@@ -18,6 +24,7 @@ const NoResults = styled.div`
   margin-top: 20px;
   font-size: 15px;
 `;
+
 const ButtonContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -49,64 +56,68 @@ export interface Item {
   };
 }
 
-// const initialItems: Item[] = [
-//   {
-//     id: 1,
-//     text: {
-//       Token: 'Token No: 1',
-//       Slot: <UserAvatar />,
-//     },
-//   },
-// ];
-
-
-const SearchResults: React.FC = () => {
-  const location = useLocation();
-  const query = new URLSearchParams(location.search).get('query') || '';
-  const [results, setResults] = useState<Item[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+const SearchResults = () => {
+  const [results, setResults] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { query } = searchRoute.useSearch();
+  const { from: previous, setFrom } = usePreviousPath();
+
+  console.log('previous', previous);
 
   const handleNewContact = () => {
     navigate({ to: '/newContacts' });
   };
 
-  useEffect(() => {
-   
-   
-    // Simulate an API call
-    const fetchData = async () => {
-      setIsLoading(true);
-      const data = await searchUser(query);
-      if(data === null) return; 
-      console.log('❤️❤️', data);
-      // Replace this with actual API call
-
-      const response = data[0];
-      setResults(response);
-      console.log('🚀🚀🚀🚀',data[0].name);
-      
-      setIsLoading(false);
-    };
-
-    fetchData();
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    const data = await searchUser(query);
+    setResults(data || []);
+    setIsLoading(false);
   }, [query]);
+
+  useEffect(() => {
+    if (query) {
+      fetchData();
+    } else {
+      setResults([]);
+    }
+  }, [query, fetchData]);
+
+  const handleResultClick = (result: User) => {
+    if (
+      previous === '/contacts' ||
+      previous === '/appointments' ||
+      previous === '/'
+    ) {
+      navigate({ to: `/createAppointment/${result._id}` });
+
+      setFrom(previous);
+    } else if (previous === '/notes') {
+      navigate({ to: `/chatpage/${result._id}` });
+      setFrom(previous);
+    }
+  };
 
   return (
     <Container>
       {isLoading ? (
-        <p>Loading...</p>
-      ) : 
-      results.length > 0 ? (
+        <Loader />
+      ) : results.length > 0 ? (
         results.map((result) => (
-          <Row $contentposition="left" key={result.id}>
-            <p>{result.text.Slot}</p>
+          <Row
+            $contentposition="left"
+            key={result._id} // Use unique identifier instead of index
+            style={{ marginBottom: 20 }}
+            onClick={() => handleResultClick(result)} // Add click handler here
+          >
+            <UserAvatar name={result.name} mobile={result.phone} />
           </Row>
         ))
       ) : (
         <Row type="vertical">
           <Row $contentposition="center">
-            <NoResults>No search results found {query} </NoResults>
+            <NoResults>No search results found for {query}</NoResults>
           </Row>
           <Row type="vertical" $contentposition="center">
             <Row onClick={handleNewContact}>

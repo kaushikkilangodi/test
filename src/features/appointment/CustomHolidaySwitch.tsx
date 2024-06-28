@@ -76,7 +76,7 @@ export default function CustomizedSwitch({ onChange }: switchprop) {
       <Style1>
         <FormControlLabel
           onChange={onChange}
-          control={<IOSSwitch sx={{ m: 1, marginLeft: 2, marginTop: '1px' }} />}
+          control={<IOSSwitch sx={{ m: 1, marginLeft: 1.9, marginTop: '2px' }} />}
           label=""
           // labelPlacement="start"
           sx={{

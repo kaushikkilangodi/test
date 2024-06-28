@@ -1,3 +1,4 @@
+// src/components/SettingsLayout.tsx
 import { useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from '@tanstack/react-router';
@@ -9,7 +10,7 @@ import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import CameraAltOutlinedIcon from '@mui/icons-material/CameraAltOutlined';
 import { Button } from '@mui/material';
 import Row from '../../components/Row';
-// import { searchDoctors } from '../../services/realmServices';
+import { useUser } from '../../context/userContext';
 
 const Profile = styled.div`
   position: relative;
@@ -35,13 +36,13 @@ const Profile = styled.div`
   @media (max-width: 350px) {
     width: 100px;
     height: 80px;
-    border-radius: 50%; /* Adjusted for a perfect circle */
+    border-radius: 50%;
   }
 
   @media (max-width: 320px) {
     width: 100px;
     height: 84px;
-    border-radius: 50%; /* Adjusted for a perfect circle */
+    border-radius: 50%; 
   }
 `;
 
@@ -91,12 +92,13 @@ const MenuItem = styled.div`
   font-size: 15px;
 `;
 
+
 function SettingsLayout() {
-  const companyName = 'Company name';
-  const profileLetter = companyName.charAt(0);
+  const companyname = 'Company name'; 
+  const profileLetter = companyname.charAt(0);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const navigate = useNavigate();
-  // const [doctor, setDoctors] = useState([]);
+  const { user } = useUser();
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file: File | null = event.target.files ? event.target.files[0] : null;
@@ -110,16 +112,6 @@ function SettingsLayout() {
       reader.readAsDataURL(file);
     }
   };
-
-  // useEffect(() => {
-  //   const fetchDoctors = async () => {
-  //     const doctors = await searchDoctors();
-  //     console.log('doctors......', doctors);
-  //     setDoctors(doctor);
-  //   };
-  //   fetchDoctors();
-  // }, []);
-  // console.log('😂😂😂', doctor);
 
   return (
     <>
@@ -152,44 +144,44 @@ function SettingsLayout() {
           sx={{ color: '#000' }}
           onClick={() => navigate({ to: '/companyinfo' })}
         >
-          <CompanyName>{companyName}</CompanyName>
+          <CompanyName>{user ? user?.companyName : companyname}</CompanyName>
         </Button>
       </Logo>
-      <Row type="vertical" style={{ marginLeft: 15,cursor:'pointer' }}>
+      <Row type="vertical" style={{ marginLeft: 15,gap:'30px', cursor: 'pointer',width:'390px' }}>
         <Row onClick={() => navigate({ to: '/appointmentinfo' })}>
-          <Button sx={{ color: '#000' }}>
+          <Button sx={{ color: '#000', textTransform: 'none' }}>
             <MenuItem>
-              <ViewAgendaOutlinedIcon sx={{ fontSize: 20 }} />
+              <ViewAgendaOutlinedIcon sx={{ fontSize: 20,lineHeight:'23px' }} />
               Appointments
             </MenuItem>
           </Button>
         </Row>
         <Row onClick={() => navigate({ to: '/payment' })}>
-          <Button sx={{ color: '#000' }}>
+          <Button sx={{ color: '#000', textTransform: 'none' }}>
             <MenuItem>
               <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 20 }} />
               Payment Info
             </MenuItem>
           </Button>
         </Row>
-        
-          <Modal>
-            <Modal.Open opens="logout">
-              <Row>
-              <Button sx={{ color: '#000' }}>
+
+        <Modal>
+          <Modal.Open opens="logout">
+            <Row>
+              <Button sx={{ color: '#000', textTransform: 'none'}}>
                 <MenuItem>
                   <LogoutRoundedIcon sx={{ fontSize: 20 }} />
                   Logout
                 </MenuItem>
               </Button>
-              </Row>
-            </Modal.Open>
+            </Row>
+          </Modal.Open>
 
-            <Modal.Window name="logout">
-              <Logout />
-            </Modal.Window>
-          </Modal>
-        </Row>
+          <Modal.Window name="logout">
+            <Logout />
+          </Modal.Window>
+        </Modal>
+      </Row>
     </>
   );
 }

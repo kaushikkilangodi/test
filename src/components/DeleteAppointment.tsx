@@ -2,6 +2,7 @@ import { useContext } from 'react';
 import ConfirmationDialog from './ConfirmationDialog';
 import Modal, { ModalContext } from './Modal';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import { IconButton } from '@mui/material';
 
 function DeleteAppointment() {
   const { closeModal } = useContext(ModalContext);
@@ -13,7 +14,18 @@ function DeleteAppointment() {
   return (
     <Modal>
       <Modal.Open opens="Delete-slot">
-        <DeleteOutlineOutlinedIcon />
+        <IconButton
+          aria-label="edit"
+          size="large"
+          sx={{
+            color: 'black',
+            ':hover': {
+              background: 'none',
+            },
+          }}
+        >
+          <DeleteOutlineOutlinedIcon fontSize='inherit'/>
+        </IconButton>
       </Modal.Open>
       <Modal.Window name="Delete-slot">
         <ConfirmationDialog

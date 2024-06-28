@@ -14,16 +14,19 @@ const CenteredContainer = styled.div`
 
 const InputContainer = styled.div<{ width?: string }>`
   position: relative;
-  margin: 20px 0;
-  width: ${(props) => props.width || '300px'};
+  margin: 24px 0;
+  background-color:rgba(217, 217, 217, 1);
+  border-radius:12px;
+  width: ${(props) => props.width || '350px'};
 `;
 
 const InputField = styled.input`
   width: 100%;
   padding: 12px; /* Increased padding */
   font-size: 12px; /* Increased font size */
-  border: 2px solid #000; /* Increased border width */
+  border: 1px solid rgba(217, 217, 217, 1); /* Increased border width */
   border-radius: 5px;
+  height: 53px;
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
   transition:
     border-color 0.3s ease,

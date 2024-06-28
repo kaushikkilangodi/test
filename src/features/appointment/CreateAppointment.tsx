@@ -1,14 +1,25 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import Input from '../../components/Input';
-import { Button } from '@mui/material';
+import { Button, IconButton } from '@mui/material';
 import Row from '../../components/Row';
-import DeleteAppointment from '../../components/DeleteAppointment';
+import {
+  createAppointment,
+  // updateAppointmen,
+  displaySlots,
+  edit_App_Slot_No,
+  fetchContactById,
+  // fetchContactById,
+  getUpcomingAppById,
+} from '../../services/realmServices';
+import UserAvatar from '../../components/UserAvatar';
+import { FiEdit } from 'react-icons/fi';
+import { useParams, useNavigate, useLocation } from '@tanstack/react-router';
 
 interface Slot {
-  id: number;
-  time: string;
-  bookings: number;
+  _id: string;
+  slotNo: number;
+  slotTime: string;
 }
 
 const Container = styled.div`
@@ -25,23 +36,38 @@ const FlexContainer = styled.div`
 const SlotContainer = styled.div`
   width: 100%;
   height: 100%;
-  margin-top: 10px;
-  margin-bottom: 20px;
+  margin: 10px 50px 20px 20px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 20px;
+
+  @media (max-width: 1200px) {
+    margin: 10px 30px 20px 10px;
+    gap: 15px;
+  }
+
+  @media (max-width: 768px) {
+    margin: 10px 20px 20px 10px;
+    gap: 10px;
+  }
+
+  @media (max-width: 480px) {
+    margin: 10px 10px 20px 5px;
+    gap: 2px;
+  }
 `;
 
-const SlotItem = styled.div<{ isSelected: boolean }>`
+const SlotItem = styled.div<{ $isSelected: boolean }>`
   width: 100%;
+  max-width: 160px;
   height: 90%;
-  border: 1px solid #d9d9d9;
-  border-radius: 10%;
-  background-color: ${({ isSelected }) => (isSelected ? '#5A9EEE' : 'white')};
+  border: 1px solid rgba(217, 217, 217, 1);
+  border-radius: 12px;
+  background-color: ${({ $isSelected }) => ($isSelected ? '#5A9EEE' : 'white')};
   cursor: pointer;
   padding: 7px 10px 10px 10px;
   position: relative;
-  color: ${({ isSelected }) => (isSelected ? 'black' : '#5A9EEE')};
+  color: ${({ $isSelected }) => ($isSelected ? 'black' : '#5A9EEE')};
 `;
 
 const Circle = styled.div`
@@ -50,90 +76,194 @@ const Circle = styled.div`
   background-color: white;
   border-radius: 50%;
   position: absolute;
-  top: 5px; /* Adjust as needed */
-  right: 5px; /* Adjust as needed */
+  top: 5px;
+  right: 5px;
 `;
 
 const TextArea = styled.textarea`
   width: 95%;
-  height: 100%;
+  height: 124px;
   padding: 10px;
-  border-radius: 5px;
+  border-radius: 12px;
   border: 1px solid #d9d9d9;
 `;
+const Comments = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+  margin-bottom: 20px;
+`;
+const StyledError = styled.div`
+  background-color: #fde2e2;
+  height: 50px;
+  border-radius: 12px;
+  color: red;
+  font-size: 16px;
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+  align-items: center;
+`;
+interface Data {
+  name: string;
+  phone: string;
+  date: string;
+  slotNo: number;
+  comments: string;
+  contactId: string;
+}
 
 const CreateAppointment = () => {
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string | undefined>(
-    '2024-04-12'
-  ); // Default date
-  const [comments, setComments] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<string | undefined>();
+  const [comments, setComments] = useState('');
+  const [formattedDate, setFormattedDate] = useState('');
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [userData, setUserData] = useState<Data | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { id } = useParams({ strict: false });
+  const isEditAppointment =
+    location.pathname.split('/')[1] === 'editAppointment';
 
-  const slots: Slot[] = [
-    { id: 1, time: '8:00 - 9:00 AM', bookings: 5 },
-    { id: 2, time: '9:00 - 10:00 AM', bookings: 5 },
-    { id: 3, time: '10:00 - 11:00 AM', bookings: 5 },
-    { id: 4, time: '11:00 - 12:00 AM', bookings: 5 },
-    { id: 5, time: '2:00 - 3:00 AM', bookings: 5 },
-    { id: 6, time: '3:00 - 4:00 AM', bookings: 5 },
-  ];
+  useEffect(() => {
+    const getSlots = async () => {
+      if (!selectedDate) return;
+      const date = new Date(selectedDate);
+      const formatDate = `${date.getDate()} ${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
+      setFormattedDate(formatDate);
+      const fetchedSlots = await displaySlots(formatDate);
+      console.log(fetchedSlots);
 
-  const handleSave = () => {
-    if (selectedSlot !== null && selectedDate) {
-      console.log('Selected Slot:', selectedSlot);
-      console.log('Selected Date:', selectedDate);
-      console.log('Comments:', comments);
-      alert('Appointment saved successfully!');
-      setSelectedSlot(null);
-      setComments('');
+      setSlots(fetchedSlots);
+    };
+
+    getSlots();
+  }, [selectedDate]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (isEditAppointment) {
+        if (id === undefined) return;
+        const data = await getUpcomingAppById(id);
+        if (data === undefined) return;
+        console.log('hello', data);
+
+        setUserData(data);
+
+        if (isEditAppointment && data) {
+          setSelectedDate(data.date);
+          setComments(data.comment);
+          setSelectedSlot(data.slotNo);
+        }
+      } else {
+        if (id === undefined) return;
+        const data = await fetchContactById(id);
+        setUserData(data);
+      }
+    };
+
+    fetchData();
+  }, [id, isEditAppointment]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSlot || !formattedDate) return;
+    if (id === undefined) return;
+    if (isEditAppointment) {
+      console.log('selected', selectedSlot);
+      console.log('🔥🔥🔥', id);
+
+      const data = await edit_App_Slot_No(id, selectedSlot,comments);
+      if (data) {
+        navigate({ to: '/appointments' });
+      }
+    } else {
+      await createAppointment(selectedSlot, formattedDate, id, comments);
+      navigate({ to: '/appointments' });
     }
   };
 
-  const isSaveEnabled = selectedSlot !== null && selectedDate !== null;
+  const isSaveEnabled = selectedSlot !== null && selectedDate !== undefined;
+
+  if (userData === null) return null;
+  // console.log(userData);
 
   return (
     <Container>
+      <Row
+        style={{
+          marginLeft: 15,
+          marginBottom: 30,
+          marginTop: 20,
+          color: '#000',
+        }}
+      >
+        <UserAvatar name={userData.name} mobile={userData.phone} />
+        <Row $contentposition="right">
+          <IconButton
+            aria-label="edit"
+            size="large"
+            sx={{
+              color: '#000',
+              ':hover': {
+                background: 'none',
+              },
+            }}
+            onClick={() =>
+              navigate({ to: `/editcontact/${userData.contactId}` })
+            }
+          >
+            <FiEdit />
+          </IconButton>
+        </Row>
+      </Row>
       <FlexContainer>
-        <DeleteAppointment />
         <Input
           label=""
           type="date"
           id="appointmentDate"
-          defaultValue={selectedDate}
+          value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value)}
           style={{ width: '100%' }}
+          disabled={isEditAppointment}
         />
       </FlexContainer>
-      <SlotContainer>
-        {slots.map((slot) => (
-          <SlotItem
-            key={slot.id}
-            isSelected={selectedSlot === slot.id}
-            onClick={() => setSelectedSlot(slot.id)}
-          >
-            <Circle /> {/* Add the circle component */}
-            <div style={{ fontSize: '18.5px', fontWeight: 'bold' }}>
-              <p>Slot {slot.id}</p>
-            </div>
-            <div style={{ fontSize: '16px', color: 'black' }}>
-              <p>({slot.bookings}/10)</p>
-            </div>
-            <div style={{ fontSize: '16px', color: 'black' }}>
-              <p>{slot.time}</p>
-            </div>
-          </SlotItem>
-        ))}
-      </SlotContainer>
-      <div style={{ marginBottom: '20px', width: '100%', height: '15vh' }}>
+      {slots.length > 0 ? (
+        <SlotContainer>
+          {slots.map((slot) => (
+            <SlotItem
+              key={slot._id}
+              $isSelected={selectedSlot === slot.slotNo}
+              onClick={() => setSelectedSlot(slot.slotNo)}
+            >
+              <Circle />
+              <div style={{ fontSize: '18.5px', fontWeight: 'bold' }}>
+                <p>Slot {slot.slotNo}</p>
+              </div>
+              <div style={{ fontSize: '14px', color: 'black' }}>
+                <p>(10/10)</p>
+              </div>
+              <div style={{ fontSize: '14px', color: 'black' }}>
+                <p>{slot.slotTime}</p>
+              </div>
+            </SlotItem>
+          ))}
+        </SlotContainer>
+      ) : (
+        <StyledError>No slots available for the selected date.</StyledError>
+      )}
+      <Comments>
         <TextArea
           placeholder="Comments"
           value={comments}
           onChange={(e) => setComments(e.target.value)}
         />
-      </div>
-
+      </Comments>
       <Row $contentposition="center">
         <Button
+          type="submit"
           variant="outlined"
           sx={{
             color: 'white',
@@ -146,10 +276,10 @@ const CreateAppointment = () => {
             height: '45px',
             ':hover': { backgroundColor: '#5A9EEE', color: 'white' },
           }}
-          onClick={handleSave}
           disabled={!isSaveEnabled}
+          onClick={handleSubmit}
         >
-          Save
+          {isEditAppointment ? 'Update' : 'Save'}
         </Button>
       </Row>
     </Container>

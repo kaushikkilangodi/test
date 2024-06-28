@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 import Row from './Row';
 import { Avatar } from '@mui/material';
-// import { blue } from '@mui/material/colors';
+// import { useNavigate } from '@tanstack/react-router';
 
 const Content = styled.div`
   font-size: 14px;
@@ -26,19 +26,40 @@ const Content1 = styled.div`
 `;
 
 interface UserAvatarProps {
-  data: {
-    Token: string;
-    Slot: string;
-    Time: string;
-  };
+  name: string;
+  mobile: string;
+  Token: string;
+  Slot: string;
+  Time: string;
+  onClick: () => void;
 }
 
-export default function AppointmentAvatar({ data }: UserAvatarProps) {
+export default function AppointmentAvatar({
+  name,
+  mobile,
+  Token,
+  Slot,
+  Time,
+  onClick,
+}: UserAvatarProps) {
+  // const navigate = useNavigate();
+  const dateObject = new Date(Time);
+
+  const addLeadingZero = (number: number) =>
+    number < 10 ? `0${number}` : number;
+
+  const hours = addLeadingZero(dateObject.getHours()) as number;
+  const minutes = addLeadingZero(dateObject.getMinutes());
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const formattedHours = hours % 12 || 12;
+  const formattedTimeString = `${addLeadingZero(formattedHours)}:${minutes} ${ampm}`;
+
   return (
     <Row
       type="horizontal"
       $contentposition="spaceBetween"
       style={{ background: '', width: '100%' }}
+      onClick={onClick}
     >
       <Avatar
         sx={{
@@ -54,21 +75,25 @@ export default function AppointmentAvatar({ data }: UserAvatarProps) {
       </Avatar>
       <Row type="vertical" $contentposition="spaceBetween" size="xsmall">
         <Row>
-          <Content1>Jane Cooper</Content1>
+          <Content1>{name}</Content1>
         </Row>
         <Row>
-          <Content>+91 9999999999</Content>
+          <Content>+91 {mobile}</Content>
         </Row>
       </Row>
       <Row $contentposition="center">
         <Row type="vertical" size="small" style={{ fontSize: 12 }}>
-          <Row>{data.Token}</Row>
-          <Row>{data.Slot}</Row>
+          <Row>Token No: {Token}</Row>
+          <Row>Slot No: {Slot}</Row>
         </Row>
       </Row>
       <Row type="vertical" style={{ marginTop: -50, fontSize: 14 }}>
-        {data.Time}
+        {formattedTimeString}
       </Row>
     </Row>
   );
 }
+
+AppointmentAvatar.defaultProps = {
+  onClick: undefined,
+};

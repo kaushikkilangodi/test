@@ -4,12 +4,16 @@ import Row from '../../components/Row';
 import Modal, { ModalContext } from '../../components/Modal';
 import ConfirmationDialog from '../../components/ConfirmationDialog';
 import styled from 'styled-components';
-import { useContext } from 'react';
+import { useContext, useState, useEffect } from 'react';
 import { IconButton } from '@mui/material';
+import { TimePicker } from 'antd';
+import moment from 'moment';
+import dayjs, { Dayjs } from 'dayjs';
 
 interface Slot {
   id: number;
-  time: string;
+  ObjectID: string;
+  time: string; // Assuming this is a string in format "HH:mm - HH:mm"
   isDirty: boolean;
   people: number;
   date: string;
@@ -21,7 +25,7 @@ interface SlotCardProps {
   handleTimeChange: (id: number, value: string) => void;
   handlePeopleChange: (id: number, value: number) => void;
   saveSlot: (id: number) => void;
-  handleDeleteSlot: (id: number) => void;
+  handleDeleteSlot: (id: string) => void;
 }
 
 const SlotCard1 = styled.div`
@@ -51,14 +55,6 @@ const SlotInput = styled.input`
   }
 `;
 
-const SlotSelect = styled.select`
-  padding: 10px;
-  font-size: 12px;
-  border: 1px solid #ccc;
-  border-radius: 10px;
-  width: 100%;
-`;
-
 const IconContainer = styled.div`
   display: flex;
   justify-content: end;
@@ -75,6 +71,28 @@ export default function SlotCard({
   handleDeleteSlot,
 }: SlotCardProps) {
   const { closeModal } = useContext(ModalContext);
+  const { RangePicker } = TimePicker;
+  const [value, setValue] = useState<[Dayjs | null, Dayjs | null]>([
+    null,
+    null,
+  ]);
+
+  useEffect(() => {
+    if (slot.time) {
+      const [start, end] = slot.time
+        .split(' - ')
+        .map((t) => dayjs(moment(t, 'hh:mm A').toISOString()));
+      setValue([start, end]);
+    }
+  }, [slot.time]);
+
+  const onChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
+    if (dates) {
+      setValue(dates);
+      const formattedTime = `${dates[0]?.format('hh:mm A')} - ${dates[1]?.format('hh:mm A')}`;
+      handleTimeChange(slot.id, formattedTime);
+    }
+  };
 
   return (
     <SlotCard1 key={slot.id}>
@@ -100,7 +118,7 @@ export default function SlotCard({
             <Modal>
               <Modal.Open opens="Delete-slot">
                 <IconButton
-                  aria-label="edit"
+                  aria-label="delete"
                   size="large"
                   sx={{
                     color: 'black',
@@ -117,7 +135,7 @@ export default function SlotCard({
                   title="Confirm Delete"
                   cancelText="No"
                   confirmText="Yes"
-                  onConfirm={() => handleDeleteSlot(slot.id)}
+                  onConfirm={() => handleDeleteSlot(slot.ObjectID)}
                   closeModal={closeModal}
                 >
                   <p>Are you sure you want to delete the slot?</p>
@@ -128,43 +146,37 @@ export default function SlotCard({
         </IconContainer>
       </Row>
 
-      <div>
-        <SlotLabel htmlFor={`time-${slot.id}`}>Schedule:</SlotLabel>
-        <SlotSelect
-          id={`time-${slot.id}`}
-          value={slot.time}
-          onChange={(e) => handleTimeChange(slot.id, e.target.value)}
-          disabled={!slot.isDirty}
-        >
-          <option value="">Select Time</option>
-          {[
-            '8:00 AM - 9:00 AM',
-            '9:00 AM - 10:00 AM',
-            '10:00 AM - 11:00 AM',
-            '11:00 AM - 12:00 PM',
-            '12:00 PM - 1:00 PM',
-            '1:00 PM - 2:00 PM',
-            '2:00 PM - 3:00 PM',
-            '3:00 PM - 4:00 PM',
-            '4:00 PM - 5:00 PM',
-          ].map((time) => (
-            <option key={time} value={time}>
-              {time}
-            </option>
-          ))}
-        </SlotSelect>
-      </div>
-      <div>
-        <SlotLabel htmlFor={`people-${slot.id}`}>People per slot:</SlotLabel>
-        <SlotInput
-          type="number"
-          id={`people-${slot.id}`}
-          value={slot.people}
-          onChange={(e) =>
-            handlePeopleChange(slot.id, parseInt(e.target.value))
-          }
-        />
-      </div>
+      <Row type="vertical" size="small">
+        <Row>
+          <SlotLabel htmlFor={`time-${slot.id}`}>Schedule:</SlotLabel>
+        </Row>
+        <Row>
+            <RangePicker
+            id={`time-${slot.id}`}
+            placeholder={['Start Time', 'End Time']}
+            style={{ width: '100%', borderRadius: '10px', color: '#000' }}
+            format="hh:mm A"
+            onChange={onChange}
+            value={value}
+            disabled={!slot.isDirty}
+            use12Hours
+          />
+        </Row>
+
+        <Row style={{ marginTop: 10 }}>
+          <SlotLabel htmlFor={`people-${slot.id}`}>People per slot:</SlotLabel>
+        </Row>
+        <Row>
+          <SlotInput
+            type="number"
+            id={`people-${slot.id}`}
+            value={slot.people}
+            onChange={(e) =>
+              handlePeopleChange(slot.id, parseInt(e.target.value))
+            }
+          />
+        </Row>
+      </Row>
     </SlotCard1>
   );
 }

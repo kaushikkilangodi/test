@@ -17,8 +17,9 @@ export default defineConfig({
         'safari-pinned-tab.svg',
       ],
       manifest: {
-        name: 'Appointment',
-        short_name: 'appointment',
+        name: 'Appointment System for Clinics',
+        short_name: 'Appointments',
+
         theme_color: '#ffffff',
         background_color: '#ffffff',
         start_url: '/',
@@ -55,9 +56,8 @@ export default defineConfig({
             purpose: 'any maskable',
           },
         ],
-        description:
-       'HealthConnect simplifies doctor appointment scheduling with an easy-to-use platform. Book, reschedule, and cancel appointments effortlessly. Browse detailed profiles and reviews to find the best providers. Receive timely reminders, store medical records securely, and access telehealth services. Experience hassle-free healthcare with HealthConnect!',
-        screenshots: [
+          description:'HealthConnect simplifies doctor appointment scheduling with an easy-to-use platform. Book, reschedule, and cancel appointments effortlessly. Browse detailed profiles and reviews to find the best providers. Receive timely reminders, store medical records securely, and access telehealth services. Experience hassle-free healthcare with HealthConnect!',
+              screenshots: [
           {
             src: '1.png',
             sizes: '640x480',

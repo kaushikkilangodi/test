@@ -5,7 +5,9 @@ import { useMediaQuery } from '@mui/material';
 import UserAvatar from '../components/UserAvatar';
 import { BiEditAlt } from 'react-icons/bi';
 import styled from 'styled-components';
-
+import { useEffect, useState } from 'react';
+import { displayContacts } from '../services/realmServices';
+import { User } from '../services/types';
 const Icon = styled.div`
   cursor: pointer;
   margin-right: 10px;
@@ -26,12 +28,18 @@ const Icon = styled.div`
 
 function Contacts() {
   const isSmallScreen = useMediaQuery('(max-width: 350px)');
+  const [data,setData] = useState<User[]>([]);
   const navigate = useNavigate();
-  const handleEditContact = () => {
-    navigate({ to: '/editcontact' });
-    // Redirect to the editcontact page
-    // history.push('/editcontact');
-  };
+
+  useEffect(()=>{
+    async function fetchContacts(){
+      const data = await displayContacts();
+      // console.log(data);
+      if(data === undefined) return;
+      setData(data);
+    }
+    fetchContacts();
+  })
   return (
     <>
       <Stack
@@ -45,41 +53,49 @@ function Contacts() {
               color="primary"
               sx={{
                 marginLeft: '-10px',
-                width: isSmallScreen ? '240px' : '300px',
+                width: isSmallScreen ? '240px' : '333px',
                 height: '54px',
                 backgroundColor: '#5a9eee',
                 color: 'white',
-                borderRadius: '11px',
+                borderRadius: '15px',
+                boxShadow: ' 0 4px 4px 0 rgba(0, 0, 0, 0.25)',
+                fontWeight: '400',
+                fontSize: '20px',
+                alignItems: 'center',
+                textTransform: 'none',
                 ':hover': {
                   color: 'white',
                   backgroundColor: '#5a9eee',
                 },
               }}
             >
-              New Contact
+              Create New Contact
             </Button>
           </Link>
         </Row>
       </Stack>
-      <Row style={{ marginLeft: 15 }}>
-        <UserAvatar />
-        <Row $contentposition="right">
-          <IconButton
-            aria-label="edit"
-            size="large"
-            sx={{
-              ':hover': {
-                background: 'none',
-              },
-            }}
-            onClick={handleEditContact}
-          >
-            <Icon>
-              <BiEditAlt />
-            </Icon>
-          </IconButton>
+      {data.map((contact) => (
+        <Row style={{ marginLeft: 15, marginBottom: -20 }}>
+          <UserAvatar name={contact.name} mobile={contact.phone} />
+          <Row $contentposition="right">
+            <IconButton
+              aria-label="edit"
+              size="large"
+              sx={{
+                
+                ':hover': {
+                  background: 'none',
+                },
+              }}
+              onClick={()=> navigate({ to: `/editcontact/${contact._id}` })}
+            >
+              <Icon>
+                <BiEditAlt />
+              </Icon>
+            </IconButton>
+          </Row>
         </Row>
-      </Row>
+      ))}
     </>
   );
 }

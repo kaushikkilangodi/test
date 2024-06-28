@@ -1,9 +1,13 @@
-import { useNavigate } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
+import { useState, useEffect } from 'react';
 import FixedAddButton from '../components/FixedAddButton';
 import UserAvatar from '../components/UserAvatar';
 import Row from '../components/Row';
 import styled from 'styled-components';
 import { Button } from '@mui/material';
+import { displayContacts } from '../services/realmServices';
+import { User } from '../services/types';
+import Loader from '../components/Loader';
 
 const Content = styled.div`
   font-family: Helvetica;
@@ -12,47 +16,82 @@ const Content = styled.div`
   line-height: 13.22px;
   margin-top: -25px;
   margin-left: 67px;
-  text-transform:none;
+  text-transform: none;
   color: #000;
-  /* @media (max-width: 380px) {
-    font-size: 10px;
-    display: flex;
-    justify-content: ;
-    align-items: left;
-  } */
+`;
+const StyledParagraph = styled.p`
+  font-family: Helvetica;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 13.22px;
+  text-transform: none;
+  color: #8b9195;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
 `;
 
 export default function Notes() {
   const navigate = useNavigate();
+  const [result, setResult] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const handleClick = () => {
     navigate({ to: '/newContacts' });
   };
+
+  useEffect(() => {
+    async function fetchContacts() {
+      setLoading(true); // Start loading
+      const data = await displayContacts();
+      setLoading(false);
+      if (data == null) return;
+      setResult(data);
+      console.log(data);
+    }
+    fetchContacts();
+  }, []);
+
+  if (loading) {
+    return <Loader />;
+  }
+
+  if (!result.length) {
+    return <StyledParagraph>No Results Found</StyledParagraph>;
+  }
+
   return (
-    <Row >
-      <Button sx={{width:'100%'}} onClick={() => navigate({ to: '/chatpage' })}>
-        <Row style={{ cursor: 'pointer',width:'100%' }}>
-          <Row  type="vertical" style={{  marginLeft: 0 }}>
-            <Row>
-              <UserAvatar $marginTop="-10px" />
+    <>
+      {result.map((item, index) => (
+        <Row key={index} style={{ marginBottom: -30 }}>
+          <Button sx={{ width: '100%' }}>
+            <Row style={{ cursor: 'pointer', width: '100%' }}>
+              <Link to={`/chatpage/${item.name}`}>
+                <Row type="vertical">
+                  <Row>
+                    <UserAvatar name={item.name} mobile={item.phone} />
+                  </Row>
+                  <Content style={{ padding: '7px 2px ' }}>
+                    hello edhbqhjb bjhdbqjhb
+                  </Content>
+                </Row>
+              </Link>
+              <Row
+                type="vertical"
+                style={{
+                  marginTop: -50,
+                  fontSize: 12,
+                  color: 'black',
+                }}
+              >
+                10:00 AM
+              </Row>
             </Row>
-           
-            <Content style={{padding:'7px 2px '}}>hello edhbqhjb bjhdbqjhb</Content>
-          
-          </Row>
-          <Row
-            type="vertical"
-            style={{
-              marginTop: -50,
-              fontSize: 12,
-              color: 'black',
-            
-            }}
-          >
-            10:00 AM
-          </Row>
+          </Button>
+          <FixedAddButton onClick={handleClick} />
         </Row>
-      </Button>
-      <FixedAddButton onClick={handleClick} />
-    </Row>
+      ))}
+    </>
   );
 }

@@ -1,12 +1,16 @@
-import  { useState, useRef, useEffect, ChangeEvent } from 'react';
+import React, { useState, useRef, useEffect, ChangeEvent } from 'react';
 import styled from 'styled-components';
 import { FaPaperPlane } from 'react-icons/fa';
 import CameraAltOutlinedIcon from '@mui/icons-material/CameraAltOutlined';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import KeyboardVoiceOutlinedIcon from '@mui/icons-material/KeyboardVoiceOutlined';
-import ChatHeader from '../components/ChatHeader';
 import PanoramaFishEyeOutlinedIcon from '@mui/icons-material/PanoramaFishEyeOutlined';
 import CloseIcon from '@mui/icons-material/Close';
+import SwitchCameraIcon from '@mui/icons-material/SwitchCamera';
+import { MdDownload } from 'react-icons/md';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
+
 
 interface Message {
   text?: string;
@@ -15,12 +19,13 @@ interface Message {
   time: string;
   image?: string;
   file?: File;
+  videoUrl?: string;
 }
 
 const ChatContainer = styled.div`
   width: 100%;
   background-color: white;
-  position:relative;
+  position: relative;
 `;
 
 const ChatMessages = styled.div`
@@ -28,7 +33,7 @@ const ChatMessages = styled.div`
   flex-direction: column;
   padding: 5px;
   overflow-y: auto;
-  max-height: 63vh; /* Adjust as needed */
+  max-height: 63vh;
 `;
 
 const MessageContainer = styled.div<{ sender: 'system' | 'user' }>`
@@ -41,7 +46,7 @@ const MessageContainer = styled.div<{ sender: 'system' | 'user' }>`
 const MessageText = styled.div<{ sender: 'system' | 'user' }>`
   padding: 1% 2% 1% 3%;
   border-radius: 10px;
-  max-width:85%;
+  max-width: 85%;
   font-size: 16px;
   background-color: ${({ sender }) =>
     sender === 'system' ? '#f1f1f1' : '#A5C8F2'};
@@ -54,10 +59,17 @@ const MessageText = styled.div<{ sender: 'system' | 'user' }>`
 `;
 
 const ImageMessage = styled.img`
-  max-width:100%;
-  border-radius:10px;
+  max-width: 100%;
+  border-radius: 10px;
   margin-top: 3px;
-  margin-right:2px;
+  margin-right: 2px;
+`;
+
+const VideoMessage = styled.video`
+  max-width: 100%;
+  border-radius: 10px;
+  margin-top: 3px;
+  margin-right: 2px;
 `;
 
 const AudioMessage = styled.audio`
@@ -78,12 +90,12 @@ const ChatInput = styled.div`
   border-top: 1px solid #d6c7c7;
   position: fixed;
   bottom: 0;
-  background-color:white;
+  background-color: white;
 `;
 
 const InputWrapper = styled.div`
   border-radius: 50px;
-  border: 1px solid ;
+  border: 1px solid;
   width: 90%;
 `;
 
@@ -146,6 +158,7 @@ const CameraButton = styled(IconButton)`
 const CameraOverlay = styled.div`
   position: fixed;
   top: 0;
+  bottom: 0;
   left: 0;
   width: 100%;
   height: 100%;
@@ -157,21 +170,63 @@ const CameraOverlay = styled.div`
 `;
 
 const VideoContainer = styled.div`
-  position: relative;
+  position: absolute;
   width: 100%;
-  height: 100%;
- 
+  height: 100vh;
+  max-width: 625px;
+  margin: 0 auto;
+
+  @media (max-width: 380px) {
+    width: 602px;
+    height: 100vh;
+  }
+  @media (max-width: 350px) {
+    width: 602px;
+    height: 100vh;
+  }
 `;
 
 const CaptureButton = styled.button`
   position: absolute;
-  display: flex;
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
   border: none;
   background: none;
   cursor: pointer;
+`;
+
+const RecordButton = styled.button`
+  position: absolute;
+  bottom: 40px;
+  left: 40%;
+  transform: translateX(-50%);
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: white;
+`;
+
+const StopButton = styled.button`
+  position: absolute;
+  bottom: 40px;
+  left: 70%;
+  transform: translateX(-50%);
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: white;
+`;
+
+const SwitchCameraButton = styled.button`
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: white;
+  background-color: black;
 `;
 
 const CloseButton = styled.button`
@@ -181,11 +236,46 @@ const CloseButton = styled.button`
   border: none;
   background: none;
   cursor: pointer;
+  color: white;
+  background-color: black;
 `;
 
+const TimerDisplay = styled.div`
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  font-size: 20px;
+  background-color: black;
+`;
 
+const DownloadButton = styled.button`
+  margin-top: 5px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  max-width: 100%;
+  white-space: nowrap; /* Ensures text doesn't wrap */
+  overflow: hidden; /* Prevents overflow */
+  text-overflow: ellipsis; /* Adds ellipsis (...) for overflow */
+`;
+const PdfPreview = styled.embed`
+  max-width: 100%;
+  height: 200px;
+  border-radius: 10px;
+  margin-top: 3px;
+  margin-right: 2px;
+  overflow: hidden; /* Prevents overflow */
+  text-overflow: ellipsis; /* Adds ellipsis (...) for overflow */
+`;
 
-const ChatPage = () => {
+function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([
     { text: 'Hello', sender: 'user', time: '11:01 AM' },
     { text: 'I have a question.', sender: 'user', time: '11:03 AM' },
@@ -193,11 +283,20 @@ const ChatPage = () => {
 
   const [newMessage, setNewMessage] = useState<string>('');
   const [showMicrophone, setShowMicrophone] = useState<boolean>(true);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(
+    null
+  );
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [capturedMedia, setCapturedMedia] = useState<string | null>(null);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  const [recording, setRecording] = useState<boolean>(false);
+  const [recordingStartTime, setRecordingStartTime] = useState<number | null>(
+    null
+  );
+  const [recordingDuration, setRecordingDuration] = useState<string>('00:00');
+  const [filePreview, setFilePreview] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-
+  const mediaStreamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatMessagesRef = useRef<HTMLDivElement>(null);
 
@@ -207,229 +306,401 @@ const ChatPage = () => {
     }
   }, [messages]);
 
-  const handleSend = () => {
-    if (newMessage.trim()) {
-      const currentTime = new Date().toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-      setMessages([
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (recording && recordingStartTime) {
+      timer = setInterval(() => {
+        const now = Date.now();
+        const elapsed = Math.floor((now - recordingStartTime) / 1000);
+        const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
+        const seconds = String(elapsed % 60).padStart(2, '0');
+        setRecordingDuration(`${minutes}:${seconds}`);
+      }, 1000);
+    } else {
+      setRecordingDuration('00:00');
+    }
+
+    return () => clearInterval(timer);
+  }, [recording, recordingStartTime]);
+
+  const handleSendMessage = () => {
+    if (newMessage.trim() !== '') {
+      const newMessages = [
         ...messages,
-        { text: newMessage, sender: 'user', time: currentTime },
-      ]);
+        {
+          text: newMessage,
+          sender: 'user',
+          time: new Date().toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+        },
+      ];
+      setMessages(newMessages);
       setNewMessage('');
     }
   };
 
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setNewMessage(e.target.value);
-    setShowMicrophone(e.target.value.trim() === '');
-  };
-
-  const handleInputFocus = () => {
-    setShowMicrophone(newMessage.trim() === '');
-  };
-
-  const handleInputBlur = () => {
-    if (newMessage.trim() === '') {
-      setShowMicrophone(true);
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSendMessage();
     }
   };
 
-  const handleAttachmentClick = () => {
-    fileInputRef.current?.click();
-  };
-
-
-  const startRecording = () => {
-    navigator.mediaDevices
-      .getUserMedia({ audio: true })
-      .then((stream) => {
-        const recorder = new MediaRecorder(stream);
-        setMediaRecorder(recorder);
-        recorder.start();
-
-        const chunks: Blob[] = [];
-        recorder.ondataavailable = (event) => {
-          chunks.push(event.data);
-        };
-
-        recorder.onstop = () => {
-          const audioBlob = new Blob(chunks, { type: 'audio/wav' });
-          const audioUrl = URL.createObjectURL(audioBlob);
-          const currentTime = new Date().toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          });
-          setMessages([
-            ...messages,
-            { audioUrl, sender: 'user', time: currentTime },
-          ]);
-        };
-      })
-      .catch((error) => {
-        console.error('Error accessing microphone:', error);
-      });
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorder) {
-      mediaRecorder.stop();
-    }
-  };
-
-  const handleOpenCamera = async () => {
-    setIsCameraOpen(true);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
+  const handleMicrophoneClick = async () => {
+    if (showMicrophone) {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const audioChunks: BlobPart[] = [];
+      recorder.ondataavailable = (event) => {
+        audioChunks.push(event.data);
+      };
+      recorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/mpeg-3' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const newMessages = [
+          ...messages,
+          {
+            audioUrl,
+            sender: 'user',
+            time: new Date().toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+          },
+        ];
+        setMessages(newMessages);
+        setShowMicrophone(true);
+      };
+      recorder.start();
+      setMediaRecorder(recorder);
+    } else {
+      if (mediaRecorder) {
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach((track) => track.stop());
       }
-    } catch (err) {
-      console.error('Error accessing the camera: ', err);
     }
+    setShowMicrophone(!showMicrophone);
   };
 
-  const handleCapture = () => {
+  const handleCameraClick = () => {
+    setIsCameraOpen(true);
+  };
+
+  const handleSwitchCamera = () => {
+    setFacingMode((prevMode) => (prevMode === 'user' ? 'environment' : 'user'));
+  };
+
+  const handleCapturePhoto = async () => {
     if (videoRef.current) {
       const canvas = document.createElement('canvas');
       canvas.width = videoRef.current.videoWidth;
       canvas.height = videoRef.current.videoHeight;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-        const imageData = canvas.toDataURL('image/png');
-        const currentTime = new Date().toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        });
-        setMessages([
+      const context = canvas.getContext('2d');
+      if (context) {
+        context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg');
+        setCapturedMedia(dataUrl);
+        setIsCameraOpen(false);
+        const newMessages = [
           ...messages,
-          { image: imageData, sender: 'user', time: currentTime },
-        ]);
-        setCapturedMedia(imageData);
-        handleCloseCamera();
+          {
+            image: dataUrl,
+            sender: 'user',
+            time: new Date().toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+          },
+        ];
+        setMessages(newMessages);
       }
+    }
+  };
+
+  const handleStartRecording = async () => {
+    if (videoRef.current) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      const options = { mimeType: 'video/webm; codecs=vp9' };
+      const recorder = new MediaRecorder(stream, options);
+      const videoChunks: BlobPart[] = [];
+
+      recorder.ondataavailable = (event) => {
+        videoChunks.push(event.data);
+      };
+
+      recorder.onstop = () => {
+        const videoBlob = new Blob(videoChunks, { type: 'video/webm' });
+        const videoUrl = URL.createObjectURL(videoBlob);
+        setCapturedMedia(videoUrl);
+        setIsCameraOpen(false);
+        const newMessages = [
+          ...messages,
+          {
+            videoUrl,
+            sender: 'user',
+            time: new Date().toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+          },
+        ];
+        setMessages(newMessages);
+      };
+
+      recorder.start();
+      setMediaRecorder(recorder);
+      setRecording(true);
+      setRecordingStartTime(Date.now());
+    }
+  };
+
+  const handleStopRecording = () => {
+    if (mediaRecorder) {
+      mediaRecorder.stop();
+      setRecording(false);
+      setRecordingStartTime(null);
     }
   };
 
   const handleCloseCamera = () => {
     setIsCameraOpen(false);
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      const tracks = stream.getTracks();
-      tracks.forEach((track) => track.stop());
-      videoRef.current.srcObject = null;
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
     }
   };
 
+  useEffect(() => {
+    if (isCameraOpen) {
+      (async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode },
+        });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          mediaStreamRef.current = stream;
+        }
+      })();
+    } else {
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    }
+  }, [isCameraOpen, facingMode]);
+
+  const handleAttachmentClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const file = event.target.files?.[0];
+  if (file) {
+    const newMessages = [
+      ...messages,
+      {
+        file,
+        sender: 'user',
+        time: new Date().toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      },
+    ];
+    setMessages(newMessages);
+
+    if (!file.type.startsWith('application/pdf')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        setFilePreview(dataUrl);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setFilePreview(null); // Clear any existing preview for PDF files
+    }
+  }
+};
+
+
+  const handleDownload = (file: File) => {
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
 
   return (
-    <>
-      <ChatContainer>
-      {isCameraOpen && (
-          <CameraOverlay>
-            <VideoContainer>
-              <video ref={videoRef} style={{ width: '100%', height: '100%', objectFit: 'cover' }}></video>
-              <CaptureButton onClick={handleCapture}>
-                <PanoramaFishEyeOutlinedIcon style={{ fontSize: '20vw', color: 'white' }} />
-              </CaptureButton>
-              <CloseButton onClick={handleCloseCamera}>
-                <CloseIcon style={{ fontSize: '12vw', color: 'white' }} />
-              </CloseButton>
-            </VideoContainer>
-          </CameraOverlay>
-        )}
-         {capturedMedia && (
-        <div style={{width: '100%',height:'100%' ,objectFit:'cover'}}>
-        </div>
-      )}
-        <ChatMessages ref={chatMessagesRef}>
-          <ChatHeader />
-          {messages.map((message, index) => (
-            <MessageContainer key={index} sender={message.sender}>
-              <MessageText sender={message.sender}>
-                {message.text ? (
-                  message.text
-                ) : message.file ? (
-                  <div>
-                    <strong>{message.file.name}</strong>
-                    <br />
-                    <a
-                      href={URL.createObjectURL(message.file)}
-                      download={message.file.name}
-                    >
-                      {message.file.name}
-                    </a>
-                  </div>
-                    ) : message.image ? (
-                      <ImageMessage src={message.image} alt="Captured" />
-                ) : (
-                  <AudioMessage controls src={message.audioUrl} />
-                )}
-                <Timestamp>{message.time}</Timestamp>
-              </MessageText>
-            </MessageContainer>
-          ))}
-        </ChatMessages>
-      </ChatContainer>
+    <ChatContainer>
+      <ChatMessages ref={chatMessagesRef}>
+        {messages.map((message, index) => (
+          <MessageContainer key={index} sender={message.sender}>
+            <MessageText sender={message.sender}>
+              {message.text && <span>{message.text}</span>}
+              {message.audioUrl && (
+                <AudioMessage controls src={message.audioUrl} />
+              )}
+              {message.image && (
+                <ImageMessage src={message.image} alt="Image" />
+              )}
+              {message.videoUrl && (
+                <VideoMessage controls src={message.videoUrl} />
+              )}
+              {message.file && (
+                <>
+                  {message.file && (
+                    <>
+                      <DownloadButton
+                        onClick={() => handleDownload(message.file!)}
+                      >
+                        <MdDownload style={{ marginRight: '5px' }} />
+                        {message.file.name}
+                      </DownloadButton>
+                      {message.file.type === 'application/pdf' && (
+                        <div>
+                          <a
+                            href={URL.createObjectURL(message.file)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {message.file.name}
+                          </a>
+                        </div>
+                      )}
+                      {message.file.type ===
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' && (
+                        <div>
+                          <PdfPreview
+                            src={URL.createObjectURL(message.file)}
+                            type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                          />
+                          <a
+                            href={URL.createObjectURL(message.file)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {message.file.name}
+                          </a>
+                        </div>
+                      )}
+                      {message.file.type ===
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' && (
+                        <div>
+                          <PdfPreview
+                            src={URL.createObjectURL(message.file)}
+                            type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                          />
+                          <a
+                            href={URL.createObjectURL(message.file)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {message.file.name}
+                          </a>
+                        </div>
+                      )}
+                      {message.file.type.startsWith('image/') && (
+                        <ImageMessage
+                          src={URL.createObjectURL(message.file)}
+                          alt="Image"
+                        />
+                      )}
+                      {/* Add similar conditions for other file types as needed */}
+                    </>
+                  )}
+                  <DownloadButton onClick={() => handleDownload(message.file!)}>
+                    <MdDownload style={{ marginRight: '5px' }} />
+                  </DownloadButton>
+                  {/* Add similar conditions for other file types (e.g., Excel, documents) */}
+                </>
+              )}
+              <Timestamp>{message.time}</Timestamp>
+            </MessageText>
+          </MessageContainer>
+        ))}
+      </ChatMessages>
       <ChatInput>
         <InputWrapper>
           <InputField
-            placeholder="Message"
+            type="text"
+            placeholder="Type a message..."
             value={newMessage}
-            onChange={handleInputChange}
-            onFocus={handleInputFocus}
-            onBlur={handleInputBlur}
-            onKeyDown={(e) => (e.key === 'Enter' ? handleSend() : null)}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
           />
-          <AttachmentButton onClick={handleAttachmentClick}>
-            <AttachFileIcon sx={{ fontSize: '22px' }} />
-          </AttachmentButton>
+        </InputWrapper>
+        <CameraButton onClick={handleCameraClick}>
+          <CameraAltOutlinedIcon />
+        </CameraButton>
+        <AttachmentButton onClick={handleAttachmentClick}>
+          <AttachFileIcon />
           <input
             type="file"
             ref={fileInputRef}
             style={{ display: 'none' }}
-            onChange={(e) => {
-              if (e.target.files && e.target.files.length > 0) {
-                const file = e.target.files[0];
-                const currentTime = new Date().toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                });
-                setMessages([
-                  ...messages,
-                  { file, sender: 'user', time: currentTime },
-                ]);
-              }
-            }}
+            onChange={handleFileChange}
           />
-            {!isCameraOpen && (
-            <CameraButton onClick={handleOpenCamera}>
-              <CameraAltOutlinedIcon sx={{ fontSize: '23px' }} />
-            </CameraButton>
-      )}
-       </InputWrapper>
-     
-       
-        {showMicrophone ? (
-          <MicrophoneButton
-            onMouseDown={startRecording}
-            onMouseUp={stopRecording}
-            onTouchStart={startRecording}
-            onTouchEnd={stopRecording}
-          >
-            <KeyboardVoiceOutlinedIcon sx={{ fontSize: '23px' }} />
-          </MicrophoneButton>
-        ) : (
-          <SendButton onClick={handleSend}>
-            <FaPaperPlane />
-          </SendButton>
-        )}
+        </AttachmentButton>
+
+        <MicrophoneButton
+          onClick={handleMicrophoneClick}
+          style={{ display: newMessage ? 'none' : 'block' }}
+        >
+          {showMicrophone ? (
+            <KeyboardVoiceOutlinedIcon />
+          ) : (
+            <PanoramaFishEyeOutlinedIcon />
+          )}
+        </MicrophoneButton>
+        <SendButton
+          onClick={handleSendMessage}
+          style={{ display: newMessage ? 'block' : 'none' }}
+        >
+          <FaPaperPlane />
+        </SendButton>
       </ChatInput>
-    </>
+
+      {isCameraOpen && (
+        <CameraOverlay>
+          <VideoContainer>
+            <video ref={videoRef} autoPlay playsInline />
+            {!recording && (
+              <>
+                <CaptureButton onClick={handleCapturePhoto}>
+                  <PanoramaFishEyeOutlinedIcon
+                    style={{ color: 'white', fontSize: '70px' }}
+                  />
+                </CaptureButton>
+                <RecordButton onClick={handleStartRecording}>
+                  <RadioButtonUncheckedIcon
+                    style={{ color: 'white', fontSize: '40px' }}
+                  />
+                </RecordButton>
+              </>
+            )}
+            {recording && (
+              <StopButton onClick={handleStopRecording}>
+                <RadioButtonCheckedIcon
+                  style={{ color: 'red', fontSize: '40px' }}
+                />
+              </StopButton>
+            )}
+            <SwitchCameraButton onClick={handleSwitchCamera}>
+              <SwitchCameraIcon style={{ color: 'white', fontSize: '40px' }} />
+            </SwitchCameraButton>
+            <CloseButton onClick={handleCloseCamera}>
+              <CloseIcon style={{ color: 'white', fontSize: '40px' }} />
+            </CloseButton>
+            {recording && <TimerDisplay>{recordingDuration}</TimerDisplay>}
+          </VideoContainer>
+        </CameraOverlay>
+      )}
+    </ChatContainer>
   );
-};
+}
 
 export default ChatPage;

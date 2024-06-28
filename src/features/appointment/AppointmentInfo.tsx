@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import styled from 'styled-components';
 import Row from '../../components/Row';
@@ -6,6 +6,16 @@ import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { DateContext } from '../../context/DateContext';
 import { Button, IconButton } from '@mui/material';
 import { IoClose, IoSaveOutline } from 'react-icons/io5';
+import {  copyFromLastWeek, sendSlots } from '../../services/realmServices';
+import { toast } from 'react-hot-toast';
+
+interface Slot {
+  slotTime: string;
+}
+
+interface ResultType {
+  [formattedDate: string]: Slot[];
+}
 
 const Week = styled.div`
   width: 60px;
@@ -25,6 +35,7 @@ const WeekDays = styled.div`
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
+  cursor: pointer;
   @media (max-width: 380px) {
     width: 150px;
   }
@@ -55,22 +66,25 @@ const PendingSlot = styled.div`
   margin-top: 2px;
   font-size: 12px;
 `;
-
-const Day = styled.div<{ slotExists: boolean }>`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: ${(props) => (props.slotExists ? '#4e8ad1' : 'none')};
-  width: 5px;
+const DayContainer = styled.div`
+  width: 220px;
   height: 54px;
   margin-left: 5px;
   margin-right: 5px;
   cursor: pointer;
+  position: relative;
+  display: flex;
+`;
 
-  @media (max-width: 330px) {
-    margin-left: 2px;
-    margin-right: 2px;
-  }
+const Day = styled.div<{ startMinute: number; endMinute: number }>`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #4e8ad1;
+  height: 100%;
+  position: absolute;
+  left: ${(props) => (props.startMinute / 1440) * 100}%;
+  width: ${(props) => ((props.endMinute - props.startMinute) / 1440) * 100}%;
 `;
 
 const NavigationContainer = styled.div`
@@ -85,6 +99,7 @@ const ButtonContainer = styled.div`
   align-items: center;
   margin-right: 15px;
 `;
+
 const responsiveButtonStyle = {
   fontSize: '12px',
   marginLeft: '2px',
@@ -97,20 +112,17 @@ const responsiveButtonStyle = {
   backgroundColor: '#5a9eee',
   color: 'white',
   textTransform: 'none',
-  ':hover': {
-    color: 'white',
-    backgroundColor: '#5a9eee',
-  },
-  '@media (max-width: 420px)': {
-    fontSize: '10px',
-    minWidth: '100px',
-  },
 };
-export default function AppointmentInfo() {
+
+const AppointmentInfo = () => {
   const navigate = useNavigate();
   const { selectedDate, setSelectedDate } = useContext(DateContext);
-  const [selectedTimes, setSelectedTimes] = useState<string[]>([]);
-  const [showButtons, setShowButtons] = useState(false); // State to manage the visibility of save and cancel buttons
+  const [showButtons, setShowButtons] = useState(false);
+  const [result, setResult] = useState<ResultType>({});
+  const [saveTrigger, setSaveTrigger] = useState(0);
+
+  // console.log(result);
+
 
   const handlePreviousWeek = () => {
     if (selectedDate) {
@@ -128,39 +140,19 @@ export default function AppointmentInfo() {
     }
   };
 
-  const handleClick = (day: string, date: string, timeSlot: string) => {
-    localStorage.setItem('selectedDay', day);
+  const handleClick = (date: string) => {
     localStorage.setItem('selectedDate', date);
-    localStorage.setItem('selectedTime', timeSlot);
-    setSelectedTimes([...selectedTimes, timeSlot]);
     navigate({ to: '/slots' });
   };
 
-  // Function to handle the "Copy from last week" button click
   const handleCopyFromLastWeek = () => {
-    // Your logic here to copy from last week
-    // For demonstration purposes, we'll just toggle the visibility of the buttons
     setShowButtons(true);
   };
 
-  const timeSlots = [
-    '8:00 AM - 9:00 AM',
-    '9:00 AM - 10:00 AM',
-    '10:00 AM - 11:00 AM',
-    '11:00 AM - 12:00 PM',
-    '12:00 PM - 1:00 PM',
-    '1:00 PM - 2:00 PM',
-    '2:00 PM - 3:00 PM',
-    '3:00 PM - 4:00 PM',
-    '4:00 PM - 5:00 PM',
-  ];
-  const slots = JSON.parse(localStorage.getItem('slots') || '[]');
-
-  // Calculate the date range for the header
   const startOfWeek = new Date(selectedDate || new Date());
-  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + 1); // Get the first day of the week
+  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + 1);
   const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 6); // Get the last day of the week
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
 
   const daysOfWeek = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(startOfWeek);
@@ -171,8 +163,11 @@ export default function AppointmentInfo() {
         day: 'numeric',
         month: 'short',
       }).format(date),
+      year: date.getFullYear(),
     };
   });
+
+  const yearOfFirstDay = daysOfWeek[0].year;
 
   const dateRange = `${new Intl.DateTimeFormat('en-GB', {
     day: 'numeric',
@@ -183,18 +178,76 @@ export default function AppointmentInfo() {
     month: 'short',
     year: 'numeric',
   }).format(endOfWeek)}`;
-  const buttonStyle = showButtons
-    ? {
-        ...responsiveButtonStyle,
-        backgroundColor: '#FFFFFF',
-        color: '#000000',
-        fontWeight: 600,
-        border: '1px solid #D9D9D9',
-        fontSize: '12px',
-        lineHeight: '14.52px',
-        fontStyle: 'Inter',
-      }
-    : responsiveButtonStyle;
+
+  useEffect(() => {
+    const [start, end] = dateRange.split(' - ');
+    sendSlots(start, end)
+      .then((result) => setResult(result))
+      .catch((error) => console.error(error));
+  }, [dateRange, saveTrigger]);
+
+  const buttonStyle = {
+    ...responsiveButtonStyle,
+    ...(showButtons
+      ? {
+          backgroundColor: '#FFFFFF',
+          color: '#000000',
+          border: '1px solid #D9D9D9',
+          fontSize: '12px',
+          lineHeight: '14.52px',
+          fontStyle: 'Inter',
+        }
+      : {}),
+  };
+
+  const timeToMinutes = (time: string) => {
+    const [timePart, period] = time.split(' ');
+    const [hours, minutes] = timePart.split(':');
+    let hoursInt = parseInt(hours);
+    const minutesInt = parseInt(minutes);
+
+    if (period === 'PM' && hoursInt !== 12) {
+      hoursInt += 12;
+    } else if (period === 'AM' && hoursInt === 12) {
+      hoursInt = 0; // Midnight edge case
+    }
+
+    return hoursInt * 60 + minutesInt;
+  };
+
+  // Helper function to convert "12 Jun" to "2024-06-12"
+  const formatDate = (day: string, month: string, year: number) => {
+    const date = new Date(`${day} ${month} ${year}`);
+    const monthString = (date.getMonth() + 1).toString().padStart(2, '0');
+    const dayString = date.getDate().toString().padStart(2, '0');
+    return `${date.getFullYear()}-${monthString}-${dayString}`;
+  };
+
+  const getSlotRanges = (day: string) => {
+    const [dayOfMonth, month] = day.split(' ');
+    const formattedDate = formatDate(dayOfMonth, month, yearOfFirstDay);
+
+    const slots = result[formattedDate] || [];
+
+    return slots.map((slot: { slotTime: string }) => {
+      const [start, end] = slot.slotTime.split(' - ');
+      const startMinute = timeToMinutes(start);
+      const endMinute = timeToMinutes(end);
+
+      return {
+        startMinute,
+        endMinute,
+      };
+    });
+  };
+  const handleSave = async () => {
+    if (selectedDate === null) return;
+    const data = await copyFromLastWeek(startOfWeek);
+    console.log(data);
+    setSaveTrigger((current) => current + 1);
+    toast.success('Slots copied successfully');
+    setShowButtons(false);
+  };
   return (
     <>
       <NavigationContainer>
@@ -226,6 +279,7 @@ export default function AppointmentInfo() {
               variant="outlined"
               sx={buttonStyle}
               onClick={handleCopyFromLastWeek}
+              
             >
               Copy from last week
             </Button>
@@ -233,7 +287,7 @@ export default function AppointmentInfo() {
           {showButtons && (
             <ButtonContainer>
               <IconButton
-                aria-label="edit"
+                aria-label="save"
                 size="large"
                 sx={{
                   color: 'black',
@@ -241,12 +295,12 @@ export default function AppointmentInfo() {
                     background: 'none',
                   },
                 }}
-                onClick={() => console.log('Save clicked')}
+                onClick={handleSave}
               >
                 <IoSaveOutline />
               </IconButton>
               <IconButton
-                aria-label="edit"
+                aria-label="close"
                 size="large"
                 sx={{
                   color: 'black',
@@ -262,51 +316,38 @@ export default function AppointmentInfo() {
           )}
         </Row>
         {daysOfWeek.map((day, dayIndex) => {
+          const slotRanges = getSlotRanges(day.date);
+          console.log(typeof slotRanges);
+
           return (
-            <Row type="vertical" $contentposition="center">
-              <Row key={dayIndex} $contentposition="left">
-                <Row $contentposition="center">
-                  <Week>
-                    <Row $contentposition="center" style={{ marginTop: 10 }}>
-                      {day.day}
-                    </Row>
-                    <Row $contentposition="center">{day.date}</Row>
-                  </Week>
-                  <WeekDays>
-                    {timeSlots.map((timeSlot, index) => {
-                      const slotExists = slots.some(
-                        (slot: {
-                          id: number;
-                          time: string;
-                          people: number;
-                          isDirty: boolean;
-                          date: string;
-                        }) => slot.date === day.date && slot.time === timeSlot
-                      );
-
-                      return (
-                        !selectedTimes.includes(timeSlot) && (
-                          <Day
-                            key={index}
-                            slotExists={slotExists}
-                            onClick={() =>
-                              handleClick(day.day, day.date, timeSlot)
-                            }
-                          />
-                        )
-                      );
-                    })}
-                  </WeekDays>
+            <Row key={dayIndex} $contentposition="center">
+              <Week>
+                <Row $contentposition="center" style={{ marginTop: 10 }}>
+                  {day.day}
                 </Row>
-
-                <Row type="vertical" size="small">
-                  <Row>
-                    <SlotRemaining>S 0</SlotRemaining>
-                  </Row>
-                  <Row>
-                    <PendingSlot>P 0</PendingSlot>
-                  </Row>
-                </Row>
+                <Row $contentposition="center">{day.date}</Row>
+              </Week>
+              <WeekDays onClick={() => handleClick(day.date)}>
+                <DayContainer>
+                  {slotRanges.map(
+                    (
+                      range: { startMinute: number; endMinute: number },
+                      index: number
+                    ) => (
+                      <Day
+                        key={index}
+                        startMinute={range.startMinute}
+                        endMinute={range.endMinute}
+                      />
+                    )
+                  )}
+                </DayContainer>
+              </WeekDays>
+              <Row type="vertical" size="small">
+                <SlotRemaining>S {slotRanges.length}</SlotRemaining>
+                <PendingSlot>
+                  P 
+                </PendingSlot>
               </Row>
             </Row>
           );
@@ -314,4 +355,6 @@ export default function AppointmentInfo() {
       </Row>
     </>
   );
-}
+};
+
+export default AppointmentInfo;

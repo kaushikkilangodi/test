@@ -2,11 +2,9 @@ import { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import QRCode from 'qrcode';
 import Input from '../components/Input';
-
-const Container = styled.div`
-  display: flex;
-  flex-direction: column;
-`;
+import { useUser } from '../context/userContext';
+import { FormControl, InputLabel, MenuItem, Select } from '@mui/material';
+import Row from '../components/Row';
 
 const QRCodeContainer = styled.div`
   width: 100%;
@@ -67,9 +65,10 @@ const Placeholder = styled.h4`
 
 const QRCodeScanner = () => {
   const [showPlaceholder] = useState(true);
-  const [selectedUPI, setSelectedUPI] = useState('');
   const [amount, setAmount] = useState('');
   const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const { user } = useUser();
+  const [selectedUPI, setSelectedUPI] = useState('');
 
   useEffect(() => {
     const generateQRCode = () => {
@@ -94,26 +93,44 @@ const QRCodeScanner = () => {
     return () => clearTimeout(timeout);
   }, [selectedUPI, amount]);
 
-  
   return (
-    <Container>
-      <label>
-        <Input
-          type="text"
-          label=""
-          list="upi-ids"
-          value={selectedUPI}
-          onChange={(e) => setSelectedUPI(e.target.value)}
-          placeholder="Select UPI Id"
-        />
-        <datalist id="upi-ids">
-          <option value="upi-id-1" />
-          <option value="upi-id-2" />
-          <option value="upi-id-3" />
-          {/* Add more options as needed */}
-        </datalist>
-      </label>
-
+    <Row type="vertical">
+      <Row $contentposition="center">
+        <FormControl
+          sx={{
+            width: '300px',
+          }}
+          color="secondary"
+          required
+        >
+          <InputLabel
+            id="upi-select-label"
+            sx={{
+              background: '#fff',
+              padding: '0 5px',
+              fontSize: '14px',
+              color: '#000',
+            }}
+          >
+            Select UPI Id
+          </InputLabel>
+          <Select
+            labelId="upi-select-label"
+            id="upi-select"
+            value={selectedUPI}
+            label="Select UPI Id"
+            onChange={(e) => setSelectedUPI(e.target.value)}
+            sx={{ color: '#000' }}
+          >
+            {user &&
+              user.upiId.map((upiId) => (
+                <MenuItem key={upiId} value={upiId}>
+                  {upiId}
+                </MenuItem>
+              ))}
+          </Select>
+        </FormControl>
+      </Row>
       <QRCodeContainer>
         {qrCodeUrl ? (
           <img src={qrCodeUrl} alt="UPI QR Code" style={{ width: '60%' }} />
@@ -123,6 +140,7 @@ const QRCodeScanner = () => {
           </VideoWrapper>
         )}
       </QRCodeContainer>
+
       <Input
         type="number"
         label="Amount"
@@ -130,7 +148,7 @@ const QRCodeScanner = () => {
         onChange={(e) => setAmount(e.target.value)}
         placeholder="Enter amount here"
       />
-    </Container>
+    </Row>
   );
 };
 

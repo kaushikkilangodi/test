@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-// import { useNavigate } from '@tanstack/react-router';
 import Input from '../components/Input';
 import styled from 'styled-components';
 import { Button } from '@mui/material';
@@ -10,11 +9,15 @@ import {
   handleAppInstalled,
   handleInstallClick,
 } from '../features/install/InstallPage';
-// import * as Realm from 'realm-web';
 import Row from '../components/Row';
 import { useLoginApi } from '../services/useLoginApi';
-// import { app } from '../constants';
-// import { searchDoctors } from '../services/realmServices';
+
+// Extend the Navigator interface to include the standalone property
+declare global {
+  interface Navigator {
+    standalone?: boolean;
+  }
+}
 
 const First = styled.div`
   background-color: lightgray;
@@ -55,32 +58,29 @@ const Note = styled.div`
   font-size: 16px;
   color: #000;
 `;
-// interface User {
-//   id?: string;
-// }
 
 const InstallPage = () => {
   const [showInstallPrompt, setShowInstallPrompt] = useState(true);
-  const [, setShowLogin] = useState(false);
   const [isInstallButtonClicked, setIsInstallButtonClicked] = useState(false);
-  // const [isIos, setIsIos] = useState(false);
-  const [apiKey, setApikey] = useState('');
-  const {login} = useLoginApi();
-
+  const [apiKey, setApiKey] = useState('');
+  const { login } = useLoginApi();
   const [deferredPrompt, setDeferredPrompt] = useState<DeferredPrompt | null>(
     null
   );
 
   useEffect(() => {
-    // const userAgent = window.navigator.userAgent.toLowerCase();
-    // setIsIos(/iphone|ipad|ipod/.test(userAgent));
-
     const beforeInstallPromptHandler = (e: Event) =>
       handleBeforeInstallPrompt(e, setDeferredPrompt, setShowInstallPrompt);
     const appInstalledHandler = () => handleAppInstalled(setShowInstallPrompt);
 
     window.addEventListener('beforeinstallprompt', beforeInstallPromptHandler);
     window.addEventListener('appinstalled', appInstalledHandler);
+
+    // Check if the app is already installed
+    const isAppInstalled =
+      window.navigator.standalone ||
+      window.matchMedia('(display-mode: standalone)').matches;
+    setShowInstallPrompt(!isAppInstalled);
 
     return () => {
       window.removeEventListener(
@@ -93,9 +93,9 @@ const InstallPage = () => {
 
   const handleLogin = async (e: React.SyntheticEvent) => {
     e.preventDefault();
-    console.log(apiKey);
     login(apiKey);
   };
+
   return (
     <>
       <First>
@@ -103,7 +103,7 @@ const InstallPage = () => {
         <Welcome>Welcome</Welcome>
       </First>
       <Second>
-        {showInstallPrompt && (
+        {!showInstallPrompt ? (
           <div>
             <LoadingButton
               variant="outlined"
@@ -125,7 +125,7 @@ const InstallPage = () => {
                 handleInstallClick(
                   deferredPrompt,
                   setShowInstallPrompt,
-                  setShowLogin,
+                  () => {},
                   setDeferredPrompt,
                   setIsInstallButtonClicked
                 );
@@ -137,9 +137,7 @@ const InstallPage = () => {
             </LoadingButton>
             <Note>Note: To proceed please install first</Note>
           </div>
-        )}
-
-        {showInstallPrompt && (
+        ) : (
           <div>
             <form onSubmit={handleLogin}>
               <Row $contentposition="center">
@@ -148,7 +146,7 @@ const InstallPage = () => {
                   name="apiKey"
                   placeholder="Enter the key"
                   value={apiKey}
-                  onChange={(e) => setApikey(e.target.value)}
+                  onChange={(e) => setApiKey(e.target.value)}
                 />
               </Row>
               <Row $contentposition="center">
@@ -157,11 +155,18 @@ const InstallPage = () => {
                   variant="outlined"
                   sx={{
                     color: 'white',
-                    backgroundColor: '#5A9EEE',
+                    width: '172px',
+                    textTransform: 'none',
+                    height: '53px',
+                    borderRadius: '12px',
+                    fontSize: '25px',
+                    fontWeight: '700',
+                    textAlign: 'center',
+                     boxShadow: ' 0 4px 4px 0 rgba(0, 0, 0, 0.25)',
 
+                    backgroundColor: '#5A9EEE',
                     ':hover': { backgroundColor: '#5A9EEE', color: 'white' },
                   }}
-                  // onClick={handleLogin}
                 >
                   LOGIN
                 </Button>

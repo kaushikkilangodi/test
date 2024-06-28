@@ -3,7 +3,6 @@ import { useNavigate } from '@tanstack/react-router';
 import { AnimatePresence } from 'framer-motion';
 import styled from 'styled-components';
 import Button from '@mui/material/Button';
-// import Stack from '@mui/material/Stack';
 import Row from '../../components/Row';
 import AppointmentAvatar from '../../components/AppointmentAvatar';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
@@ -12,66 +11,19 @@ import FixedAddButton from '../../components/FixedAddButton';
 import { DateContext } from '../../context/DateContext';
 import Modal from '../../components/Modal';
 import Calendar from '../../components/Calendar';
+import {
+  getAppointment,
+  updateAppointment,
+} from '../../services/realmServices';
 
-interface Item {
-  id: number;
-  text: {
-    Token: string;
-    Slot: string;
-    Time: string;
-  };
+interface AppointmentProps {
+  _id: string;
+  name: string;
+  phone: string;
+  token: string;
+  slotNo: string;
+  date: string;
 }
-
-const initialItems: Item[] = [
-  {
-    id: 1,
-    text: {
-      Token: 'Token No: 1',
-      Slot: 'Slot No: 1',
-      Time: '10:00 AM',
-    },
-  },
-  {
-    id: 2,
-    text: {
-      Token: 'Token No: 1',
-      Slot: 'Slot No: 1',
-      Time: '11:00 AM',
-    },
-  },
-  {
-    id: 3,
-    text: {
-      Token: 'Token No: 1',
-      Slot: 'Slot No: 1',
-      Time: '12:00 AM',
-    },
-  },
-  {
-    id: 4,
-    text: {
-      Token: 'Token No: 1',
-      Slot: 'Slot No: 1',
-      Time: '10:00 AM',
-    },
-  },
-  {
-    id: 6,
-    text: {
-      Token: 'Token No: 1',
-      Slot: 'Slot No: 1',
-      Time: '11:00 AM',
-    },
-  },
-  {
-    id: 7,
-    text: {
-      Token: 'Token No: 1',
-      Slot: 'Slot No: 1',
-      Time: '12:00 AM',
-    },
-  },
-];
 
 const StyledDate = styled.div`
   font-size: 15px;
@@ -93,12 +45,26 @@ const Count = styled.div`
   align-items: center;
   margin-right: 10px;
 `;
-
-
+const StyledParagraph = styled.p`
+  font-family: Helvetica;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 13.22px;
+  text-transform: none;
+  color: #8b9195;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 40vh;
+`;
 
 export default function AppointmentLayout() {
   const navigate = useNavigate();
   const { selectedDate, setSelectedDate } = useContext(DateContext);
+  const [upcomingData, setUpcomingData] = useState<AppointmentProps[]>([]);
+  const [pastData, setPastData] = useState<AppointmentProps[]>([]);
+  const [showUpcoming, setShowUpcoming] = useState(true);
+  const [activeButton, setActiveButton] = useState('upcoming');
 
   useEffect(() => {
     if (!selectedDate) {
@@ -106,30 +72,70 @@ export default function AppointmentLayout() {
     }
   }, [selectedDate, setSelectedDate]);
 
+  useEffect(() => {
+    if (activeButton === 'upcoming') {
+      handleUpcoming();
+    } else {
+      handlePast();
+    }
+  }, [selectedDate, activeButton]);
+
   const formattedSelectedDate = selectedDate
     ? `${selectedDate.getDate()} ${selectedDate.toLocaleString('default', {
         month: 'short',
       })} ${selectedDate.getFullYear()}`
     : '';
-  const [items, setItems] = useState(initialItems);
-  const hasItems = !!items.length;
 
-  const handleDelete = (index: number) => {
-    const updatedItems = items.filter(({ id }) => id !== index);
-    setItems(updatedItems);
+  const handleDelete = async (index: string) => {
+    await updateAppointment(index, 'delete');
+    console.log(`Item ${index} deleted`);
+    if (showUpcoming) {
+      setUpcomingData((currentData) =>
+        currentData?.filter((item) => item._id !== index)
+      );
+    } else {
+      setPastData((currentData) =>
+        currentData?.filter((item) => item._id !== index)
+      );
+    }
   };
 
-  const handleSave = (index: number) => {
-    const updatedItems = items.filter(({ id }) => id !== index);
-    setItems(updatedItems);
+  const handleSave = async (index: string) => {
+    await updateAppointment(index, 'complete');
+    setUpcomingData((currentData) =>
+      currentData?.filter((item) => item._id !== index)
+    );
     console.log(`Item ${index} saved`);
   };
+
   const handleClick = () => {
     navigate({ to: '/contacts' });
   };
-  // const handleSelectCalendar = () =>{
-  //   navigate('/calendar');
-  // }
+
+  const handleUpcoming = async () => {
+    const result = await getAppointment('upcoming');
+    if (!selectedDate || result === undefined) return;
+    const filteredResult = result.filter(
+      (item: AppointmentProps) =>
+        new Date(item.date).toDateString() === selectedDate.toDateString()
+    );
+    // console.log('😍😍', filteredResult);
+    setUpcomingData(filteredResult);
+    setShowUpcoming(true);
+  };
+
+  const handlePast = async () => {
+    const result = await getAppointment('past');
+    if (!selectedDate || result === undefined) return;
+    const filteredResult = result.filter(
+      (item: AppointmentProps) =>
+        new Date(item.date).toDateString() === selectedDate.toDateString()
+    );
+    // console.log('🫰🫰🫰', filteredResult);
+    setPastData(filteredResult);
+    setShowUpcoming(false);
+  };
+  console.log(upcomingData.length, pastData.length);
 
   return (
     <>
@@ -142,12 +148,23 @@ export default function AppointmentLayout() {
                 width: '97px',
                 borderRadius: '23px',
                 height: '40px',
-                backgroundColor: '#5a9eee',
-                color: 'white',
+                backgroundColor:
+                  activeButton === 'upcoming' ? ' #d9d9d9' : '#5a9eee',
+                color:
+                  activeButton === 'upcoming' ? 'black' : 'rgba(0, 0, 0, 1)',
+                textTransform: 'none',
+                boxShadow: '0 4px 4px 0 rgba(0, 0, 0, 0.25)',
+                fontSize: '15px',
+                alignItems: 'center',
+                fontWeight: '400',
                 ':hover': {
-                  color: 'white',
-                  backgroundColor: '#5a9eee',
+                  color: 'rgba(0, 0, 0, 1)',
+                  backgroundColor: 'rgba(217, 217, 217, 1)',
                 },
+              }}
+              onClick={() => {
+                setActiveButton('upcoming');
+                handleUpcoming();
               }}
             >
               Upcoming
@@ -158,12 +175,22 @@ export default function AppointmentLayout() {
                 width: '97px',
                 borderRadius: '23px',
                 height: '40px',
-                backgroundColor: '#5a9eee',
-                color: 'white',
+                backgroundColor:
+                  activeButton === 'past' ? ' #d9d9d9' : '#5a9eee',
+                boxShadow: '0 4px 4px 0 rgba(0, 0, 0, 0.25)',
+                color: activeButton === 'past' ? 'black' : 'rgba(0, 0, 0, 1)',
+                textTransform: 'none',
+                fontSize: '15px',
+                alignItems: 'center',
+                fontWeight: '400',
                 ':hover': {
-                  color: 'white',
-                  backgroundColor: '#5a9eee',
+                  color: 'rgba(0, 0, 0, 1)',
+                  backgroundColor: 'rgba(217, 217, 217, 1)',
                 },
+              }}
+              onClick={() => {
+                setActiveButton('past');
+                handlePast();
               }}
             >
               Past
@@ -177,12 +204,13 @@ export default function AppointmentLayout() {
                   sx={{
                     color: 'white',
                     backgroundColor: '#5a9eee',
-                    borderRadius: '20%',
+                    borderRadius: '8px',
                     width: '45px',
-                    height: '40px',
+                    height: '35px',
+                    boxShadow: '0 4px 4px 0 rgba(0, 0, 0, 0.25)',
                     ':hover': {
-                      color: 'white',
-                      backgroundColor: '#5a9eee',
+                      color: 'rgba(0, 0, 0, 1)',
+                      backgroundColor: 'rgba(217, 217, 217, 1)',
                     },
                   }}
                 >
@@ -198,22 +226,60 @@ export default function AppointmentLayout() {
         <Row style={{ marginTop: 20 }}>
           <StyledDate>{formattedSelectedDate}</StyledDate>
           <Row $contentposition="right">
-            <Count>2</Count>
+            <Count style={{ boxShadow: '0 4px 4px 0 rgba(0, 0, 0, 0.25)' }}>
+              {showUpcoming ? upcomingData?.length || 0 : pastData?.length || 0}
+            </Count>
           </Row>
         </Row>
-        <Row type="vertical" style={{ background: '', marginRight: 10 }}>
-          {hasItems && (
-              <AnimatePresence>
 
-                {items.map((item) => (
-                  <SwipeElement
-                    key={item.id}
-                    additionalContent={<AppointmentAvatar data={item.text} />}
-                    onDelete={() => handleDelete(item.id)}
-                    onSave={() => handleSave(item.id)}
+        <Row type="vertical" style={{ background: '', marginRight: 10 }}>
+          {showUpcoming ? (
+            upcomingData.length === 0 ? (
+              <StyledParagraph>
+                No upcoming appointments found on selected date.
+              </StyledParagraph>
+            ) : (
+              <AnimatePresence>
+                {upcomingData &&
+                  upcomingData.map((item) => (
+                    <SwipeElement
+                      key={item._id}
+                      additionalContent={
+                        <AppointmentAvatar
+                          name={item.name}
+                          mobile={item.phone}
+                          Token={item.token}
+                          Slot={item.slotNo}
+                          Time={item.date}
+                          onClick={() =>
+                            navigate({ to: `/editAppointment/${item._id}` })
+                          }
+                        />
+                      }
+                      onDelete={() => handleDelete(item._id)}
+                      onSave={() => handleSave(item._id)}
+                    />
+                  ))}
+              </AnimatePresence>
+            )
+          ) : pastData.length === 0 ? (
+            <StyledParagraph>
+              No past appointments found on selected date.
+            </StyledParagraph>
+          ) : (
+            <Row type="vertical" size="xxLarge" style={{ marginTop: 20 }}>
+              {pastData &&
+                pastData.map((item) => (
+                  <AppointmentAvatar
+                    key={item._id}
+                    name={item.name}
+                    mobile={item.phone}
+                    Token={item.token}
+                    Slot={item.slotNo}
+                    Time={item.date}
                   />
                 ))}
-              </AnimatePresence>
+            </Row>
           )}
         </Row>
       </Row>

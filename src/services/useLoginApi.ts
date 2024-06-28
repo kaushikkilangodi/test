@@ -1,35 +1,42 @@
+// src/hooks/useLoginApi.ts
 import * as Realm from 'realm-web';
 import { useNavigate } from '@tanstack/react-router';
-import { app } from '../constants';
+import { app } from '../utils/constants';
 import { searchDoctors } from './realmServices';
-import { useEffect, useState } from 'react';
+import { useUser } from '../context/userContext';
+import { User } from './types';
+import toast from 'react-hot-toast';
 
 export const useLoginApi = () => {
   const navigate = useNavigate();
-  const [userData, setUserData] = useState<any[]>([]);
-  useEffect(() => {
-    console.log(userData);
-  }, [userData]);
-  
+  const { setUser } = useUser();
+
   const login = async (apiKey: string) => {
-    console.log('apiKey', apiKey);
+    // console.log('apiKey', apiKey);
 
     const credentials = Realm.Credentials.apiKey(apiKey);
     try {
-      const users = await app.logIn(credentials);
-      const data = await searchDoctors(users.id);
-      console.log('data', data);
-      // update userData with setUserData
+      const realmUser = await app.logIn(credentials);
+      const data = await searchDoctors(realmUser.id);
       if (data === null) return;
       if (data.length > 0) {
-        setUserData(data);
-        localStorage.setItem('userid', 'true');
+        localStorage.setItem('userid', apiKey);
+        toast.success('Logged in successfully');
+
+        const user: User = {
+          ...data[0], // Assuming searchDoctors returns an array and we take the first element
+        };
+
+        setUser(user); // Set the full user data in the context
         navigate({ to: '/appointments' });
+      } else {
+        toast.error('Incorrect API key');
       }
     } catch (error) {
-      console.error('Failed to log in', error);
+      console.error('Error logging in:', error);
+      toast.error('Incorrect Credentials.\n Failed to log in');
     }
   };
 
-  return { login, userData };
+  return { login };
 };

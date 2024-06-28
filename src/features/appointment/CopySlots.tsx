@@ -3,9 +3,13 @@ import { IoClose, IoSaveOutline } from 'react-icons/io5';
 import Row from '../../components/Row';
 import { Button, IconButton } from '@mui/material';
 import styled from 'styled-components';
+import { copyFromYesterday, copyOneFromLastWeek } from '../../services/realmServices';
 
 type ButtonName = 'yesterday' | 'lastWeek' | '';
-
+type prop = {
+  date: string;
+  fetch: (date: string) => void;
+};
 const ButtonContainer = styled.div`
   display: flex;
   align-items: center;
@@ -30,32 +34,46 @@ const responsiveButtonStyle = {
   '@media (max-width: 420px)': {
     fontSize: '10px',
     minWidth: '100px',
+    padding: '5px',
   },
 };
  
-export default function CopySlots() {
+export default function CopySlots({ date, fetch }: prop) {
   const [activeButton, setActiveButton] = useState('');
 
   const handleButtonClick = (buttonName: ButtonName) => {
     setActiveButton(buttonName);
   };
-
+  const handleSave = async () => {
+    if (activeButton === 'yesterday') {
+      // console.log('Copy from Yesterday');
+      await copyFromYesterday(date);
+      fetch(date);
+      setActiveButton('');
+    } else if (activeButton === 'lastWeek') {
+      // console.log('Copy from lastWeek');
+      await copyOneFromLastWeek(date);
+      fetch(date);
+      setActiveButton('');
+    }
+  };
   const handleCancel = () => {
     setActiveButton('');
   };
- const buttonStyle =
-   activeButton === 'lastWeek' || activeButton === 'yesterday'
-     ? {
-         ...responsiveButtonStyle,
-         backgroundColor: '#FFFFFF',
-         color: '#000000',
-         fontWeight: 600,
-         fontSize: '12px',
-         lineHeight: '14.52px',
-         border: '1px solid #D9D9D9',
-         fontStyle: 'Inter',
-       }
-     : responsiveButtonStyle;
+  const buttonStyle =
+    activeButton === 'lastWeek' || activeButton === 'yesterday'
+      ? {
+          ...responsiveButtonStyle,
+          backgroundColor: '#FFFFFF',
+          color: '#000000',
+          fontWeight: 600,
+          fontSize: '12px',
+          lineHeight: '14.52px',
+          border: '1px solid #D9D9D9',
+          fontStyle: 'Inter',
+          padding: '5px',
+        }
+      : responsiveButtonStyle;
   return (
     <>
       <Row
@@ -97,8 +115,9 @@ export default function CopySlots() {
                   background: 'none',
                 },
               }}
+              onClick={handleSave}
             >
-              <IoSaveOutline onClick={() => console.log('Save clicked')} />
+              <IoSaveOutline />
             </IconButton>
             <IconButton
               aria-label="edit"
@@ -109,9 +128,10 @@ export default function CopySlots() {
                   background: 'none',
                 },
               }}
+              onClick={handleCancel}
             >
               {' '}
-              <IoClose onClick={handleCancel} />
+              <IoClose />
             </IconButton>
           </ButtonContainer>
         )}

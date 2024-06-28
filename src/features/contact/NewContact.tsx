@@ -1,11 +1,11 @@
-import { useState, ChangeEvent, FormEvent } from 'react';
+import { useState, ChangeEvent, FormEvent, useEffect } from 'react';
 import styled from 'styled-components';
 import Input from '../../components/Input'; // Importing your custom Input component
 import Row from '../../components/Row';
-import { useLocation} from '@tanstack/react-router';
+import { useLocation, useNavigate, useParams } from '@tanstack/react-router';
 import { Button } from '@mui/material';
-import { createUser } from '../../services/realmServices';
-
+import { createUser, editContact, fetchContactById } from '../../services/realmServices';
+import { toast } from 'react-hot-toast';
 
 interface FormData {
   name: string;
@@ -28,39 +28,64 @@ const Content = styled.div`
 `;
 
 export default function NewContact() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<FormData>({
-    name: '',
-    phone: '',
-    gender: '',
-    dob: '',
-    addressLine1: '',
-    addressLine2: '',
-    city: '',
-    pinCode: '',
+      name: '',
+      phone: '',
+      gender: '',
+      dob: '',
+      addressLine1: '',
+      addressLine2: '',
+      city: '',
+      pinCode: '',
   });
+// console.log('formData', formData);
 
-  // const history = useHistory();
   const location = useLocation();
-
-  const isEditContact = location.pathname.includes('editcontact');
+  const[hasChanged, setHasChanged] = useState(false);
+  const isEditContact = location.pathname.split('/')[1] === 'editcontact';
+  const {id} = useParams({ strict:false});
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    setHasChanged(true)
     setFormData((prevFormData) => ({
       ...prevFormData,
       [name]: value,
     }));
   };
+  useEffect(() => {
+    async function fetchContact() {
+      if (isEditContact) {
+        if (id === undefined) return;
+        const data = await fetchContactById(id);
+        console.log('data', data);
+        setFormData(data);
+      }
+    }
+    fetchContact();
+  }, [isEditContact, id]);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+     if (isEditContact) {
+    e.preventDefault();
+    if (id === undefined) return;
+        if (!hasChanged) {
+          // Display toast message and exit the function
+          toast.error('Please Update any Changes to Save the Contact');
+          return;
+        }
+    await editContact(id,formData);
+     }else{
     e.preventDefault();
     console.log(formData);
-    // Save the formData to your backend or storage mechanism
-    // After successful save, you can redirect to another page
-    // For example, redirect to the editcontact page
-  
-    console.log("user...12345",formData);
-    createUser(formData);
+
+    console.log('user...12345', formData);
+    const id = await createUser(formData);
+    console.log('id', id?.insertedId.toString());
+
+    navigate({ to: `/createAppointment/${id?.insertedId.toString()}` });
+     }
   };
 
   return (
@@ -80,7 +105,6 @@ export default function NewContact() {
           value={formData.phone}
           onChange={handleChange}
           label="Phone Number"
-         
         />
         <Content>
           <Row type="vertical">
@@ -91,16 +115,16 @@ export default function NewContact() {
                 name="gender"
                 label="Male"
                 value="male"
+                checked={formData.gender === 'male'} // Determines if this option is selected
                 onChange={handleChange}
-              
               />
               <Input
                 type="radio"
                 name="gender"
                 label="Female"
                 value="female"
+                checked={formData.gender === 'female'}
                 onChange={handleChange}
-          
               />
             </Row>
           </Row>
@@ -140,21 +164,25 @@ export default function NewContact() {
           onChange={handleChange}
           label="Pin Code"
         />
-        <Row $contentposition='center'>
+        <Row $contentposition="center">
           {/* <Link to={'/createAppointment'}> */}
-            <Button variant="outlined"
+          <Button
+            variant="outlined"
             type="submit"
-          sx={{
-            color: 'white',
-            backgroundColor: '#5A9EEE',
-            fontWeight: '700',
-            font:'Helvetica',
-            fontSize:'15px',
-            borderRadius: '12px',
-            width:'100px',
-            height:'45px',
-            ':hover': { backgroundColor: '#5A9EEE', color: 'white' },
-          }}>{isEditContact ? 'Save' : 'Next'}</Button>
+            sx={{
+              color: 'white',
+              backgroundColor: '#5A9EEE',
+              fontWeight: '700',
+              font: 'Helvetica',
+              fontSize: '15px',
+              borderRadius: '12px',
+              width: '100px',
+              height: '45px',
+              ':hover': { backgroundColor: '#5A9EEE', color: 'white' },
+            }}
+          >
+            {isEditContact ? 'Save' : 'Next'}
+          </Button>
           {/* </Link> */}
         </Row>
       </form>

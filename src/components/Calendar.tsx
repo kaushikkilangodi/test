@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import { useContext } from 'react';
 import styled from 'styled-components';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -19,7 +19,7 @@ const Header = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 10px;
-  background-color: 'white';
+  background-color: white;
   color: black;
 `;
 
@@ -85,7 +85,7 @@ const Footer = styled.div`
   padding: 10px 20px;
 `;
 
-const Calendar: React.FC = () => {
+function Calendar() {
   const { selectedDate, setSelectedDate } = useContext(DateContext);
   console.log(selectedDate);
 
@@ -118,10 +118,8 @@ const Calendar: React.FC = () => {
             date,
             decreaseMonth,
             increaseMonth,
-          }: {
-            date: Date;
-            decreaseMonth: () => void;
-            increaseMonth: () => void;
+            decreaseYear,
+            increaseYear,
           }) => (
             <div
               style={{
@@ -133,6 +131,12 @@ const Calendar: React.FC = () => {
                 color: 'white',
               }}
             >
+              <button
+                onClick={decreaseYear}
+                style={{ background: 'none', border: 'none', color: 'white' }}
+              >
+                {'<<'}
+              </button>
               <button
                 onClick={decreaseMonth}
                 style={{ background: 'none', border: 'none', color: 'white' }}
@@ -151,6 +155,12 @@ const Calendar: React.FC = () => {
               >
                 {'>'}
               </button>
+              <button
+                onClick={increaseYear}
+                style={{ background: 'none', border: 'none', color: 'white' }}
+              >
+                {'>>'}
+              </button>
             </div>
           )}
         />
@@ -161,6 +171,6 @@ const Calendar: React.FC = () => {
       </Footer>
     </Container>
   );
-};
+}
 
 export default Calendar;
