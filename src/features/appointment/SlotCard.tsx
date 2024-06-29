@@ -114,7 +114,7 @@ export default function SlotCard({
               <IoSaveOutline />
             </IconButton>
           )}
-          {slots.length > 1 && (
+          {slots && (
             <Modal>
               <Modal.Open opens="Delete-slot">
                 <IconButton

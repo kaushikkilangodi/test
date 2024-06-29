@@ -14,7 +14,7 @@ import Contacts from './pages/Contacts'; //
 import PageNotFound from './components/PageNotFound';
 import SearchResults from './components/SearchResults';
 import AppointmentInfo from './features/appointment/AppointmentInfo';
-import Chat from './pages/ChatPage';
+import ChatPage from './pages/ChatPage';
 // import { displayContacts } from './services/realmServices';
 import { SearchParams } from './components/SearchResults';
 
@@ -99,7 +99,7 @@ export const searchRoute = createRoute({
   component: SearchResults,
   validateSearch: (search: Record<string, unknown>): SearchParams => {
     return {
-      query: (search.query as string),
+      query: search.query as string,
     };
   },
 });
@@ -111,7 +111,7 @@ const appointmentinfoRoute = createRoute({
 const chatpageRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/chatpage/$chatpage',
-  component: Chat,
+  component: ChatPage,
   // loader: ({ params }) => displayContacts(params.chatpage),
 });
 

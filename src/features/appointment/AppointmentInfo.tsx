@@ -112,6 +112,10 @@ const responsiveButtonStyle = {
   backgroundColor: '#5a9eee',
   color: 'white',
   textTransform: 'none',
+  ':hover': {
+    color: 'white',
+    backgroundColor: '#5a9eee',
+  },
 };
 
 const AppointmentInfo = () => {

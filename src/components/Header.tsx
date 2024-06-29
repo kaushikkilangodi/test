@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useLocation, useNavigate } from '@tanstack/react-router';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams } from '@tanstack/react-router';
 import { styled as muiStyled } from '@mui/material/styles';
 import styled from 'styled-components';
 import RouteTitle from './RouteTitle';
@@ -15,9 +15,10 @@ import ChatHeader from './ChatHeader';
 import Row from './Row';
 import { CiSearch } from 'react-icons/ci';
 import { hideQrButton, showBackButton, hideSearchBar } from '../utils/helper';
-import DeleteAppointment from './DeleteAppointment';
+import DeleteAppointment from '../features/appointment/DeleteAppointment';
 import { usePreviousPath } from '../context/PreviousPath';
-import debounce from 'lodash/debounce'; 
+import debounce from 'lodash/debounce';
+import { fetchContactById, getUpcomingAppById } from '../services/realmServices';
 
 const TitleContainer = styled.div`
   display: flex;
@@ -54,13 +55,24 @@ const QrButton = styled.button`
   }
 `;
 
-function formatRouteTitle(pathname: string) {
+async function formatRouteTitle(pathname: string) {
   if (pathname === '/') {
     return 'Appointments';
   }
 
   const parts = pathname.split('/').filter(Boolean);
-  if (parts.length > 1) {
+
+  if (parts.includes('chatpage')) {
+    const contactId = parts[parts.length - 1];
+    try {
+      const data = await fetchContactById(contactId);
+      // console.log('data', data);
+      return data.name;
+    } catch (error) {
+      console.error('Failed to fetch contact by ID:', error);
+      return 'Chat';
+    }
+  } else if (parts.length > 1) {
     return (
       parts[parts.length - 2].charAt(0).toUpperCase() +
       parts[parts.length - 2].slice(1)
@@ -69,6 +81,7 @@ function formatRouteTitle(pathname: string) {
     return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
   }
 }
+
 
 const HeaderContainer = styled.div`
   display: flex;
@@ -134,31 +147,46 @@ const StyledInputBase = muiStyled(InputBase)(({ theme }) => ({
 function Header() {
   const location = useLocation();
   const navigate = useNavigate();
-  const routeName = formatRouteTitle(location.pathname);
   const moveBack = useMoveBack();
+    const [routeName, setRouteName] = useState('');
   const [isVisible, setIsVisible] = useState(true);
   const [isSearchDisabled, setIsSearchDisabled] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const { from,setFrom } = usePreviousPath();
+  const [data,setData] = useState();
+  const { from, setFrom } = usePreviousPath();
+  const {id} = useParams({strict:false});
 
   const isSearchPage = location.pathname === '/search';
-
+  useEffect(() => {
+    async function getRouteTitle() {
+      const title = await formatRouteTitle(location.pathname);
+      setRouteName(title);
+    }
+    getRouteTitle();
+  }, [location.pathname]);
+  useEffect(()=>{
+    async function fetchById(){
+      if(id===undefined) return;
+      const data = await getUpcomingAppById(id);
+      setData(data.contactId);
+    }
+    fetchById();
+  },[id])
   const handleSearch = () => {
     setIsVisible(false);
     setIsSearchDisabled(true);
   };
 
- const handleMoveBack = () => {
-   if (from) {
-    console.log('from', from);
-    
-     navigate({to: from});
-   } else {
-     navigate({to:'/'});
-   }
-   setSearchQuery('');
- };
+  const handleMoveBack = () => {
+    if (from) {
+      console.log('from', from);
 
+      navigate({ to: from });
+    } else {
+      navigate({ to: '/' });
+    }
+    setSearchQuery('');
+  };
 
   const debouncedSearch = debounce((query: string) => {
     if (location.pathname !== '/search') {
@@ -169,7 +197,7 @@ function Header() {
       to: '/search',
       search: { query },
     });
-  }, 1000); 
+  }, 1000);
 
   const shouldHideSearchBar = hideSearchBar.some((route) =>
     typeof route === 'string'
@@ -211,7 +239,13 @@ function Header() {
                     <IoArrowBack />
                   </IconButton>
                 )}
-                <Title>{routeName || 'Appointments'}</Title>
+                <Title>
+                  {routeName && location.pathname.startsWith('/chatpage') ? (
+                    <div style={{ color: '#000' }}>{routeName}</div>
+                  ) : (
+                    routeName || 'Appointments'
+                  )}
+                </Title>
               </TitleContainer>
               <Row $contentposition="right" size="xLarge">
                 {routeName && location.pathname.startsWith('/chatpage') && (
@@ -228,7 +262,7 @@ function Header() {
                 )}
                 {routeName === 'EditAppointment' && (
                   <Row>
-                    <DeleteAppointment />
+                    <DeleteAppointment id={id || undefined}/>
 
                     <IconButton
                       aria-label="edit"
@@ -239,7 +273,7 @@ function Header() {
                           background: 'none',
                         },
                       }}
-                      onClick={() => navigate({ to: '/slots' })}
+                      onClick={() => navigate({ to: `/chatpage/${data}` })}
                     >
                       <IoChatbubbleEllipsesOutline />
                     </IconButton>

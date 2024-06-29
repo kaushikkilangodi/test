@@ -15,6 +15,7 @@ import {
   getAppointment,
   updateAppointment,
 } from '../../services/realmServices';
+import { StyledParagraph } from '../../components/StyledParagraph';
 
 interface AppointmentProps {
   _id: string;
@@ -44,18 +45,6 @@ const Count = styled.div`
   justify-content: center;
   align-items: center;
   margin-right: 10px;
-`;
-const StyledParagraph = styled.p`
-  font-family: Helvetica;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 13.22px;
-  text-transform: none;
-  color: #8b9195;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 40vh;
 `;
 
 export default function AppointmentLayout() {
@@ -235,7 +224,7 @@ export default function AppointmentLayout() {
         <Row type="vertical" style={{ background: '', marginRight: 10 }}>
           {showUpcoming ? (
             upcomingData.length === 0 ? (
-              <StyledParagraph>
+              <StyledParagraph height='45vh'>
                 No upcoming appointments found on selected date.
               </StyledParagraph>
             ) : (
@@ -263,7 +252,7 @@ export default function AppointmentLayout() {
               </AnimatePresence>
             )
           ) : pastData.length === 0 ? (
-            <StyledParagraph>
+            <StyledParagraph height='45vh'>
               No past appointments found on selected date.
             </StyledParagraph>
           ) : (

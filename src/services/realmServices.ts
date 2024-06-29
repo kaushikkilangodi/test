@@ -668,67 +668,11 @@ async function copyFromLastWeek(targetDate: Date) {
   }
 }
 //copy from yesterday
-async function copyFromYesterday(targetDate: string) {
-  const user = await getAuthenticatedUser();
-  const mongodb = user.mongoClient('mongodb-atlas');
-  const slotsCollection = mongodb.db('user-account').collection('Slots');
-
-  const dateString = targetDate;
-
-  const parsedDate = parseDateToUTC(dateString);
-  console.log('Parsed target date:', parsedDate);
-
-  const previousDay = new Date(parsedDate);
-  previousDay.setDate(parsedDate.getDate() - 1);
-
-  console.log('Fetching date:', previousDay);
-
-  try {
-    const previousDaySlotsCursor = slotsCollection.find({
-      date: {
-        $gte: new Date(previousDay.setHours(0, 0, 0, 0)),
-        $lt: new Date(parsedDate.setHours(0, 0, 0, 0)),
-      },
-    });
-
-    const previousDaySlots = await previousDaySlotsCursor; // Convert cursor to array
-    console.log('Slots from previous day:', previousDaySlots);
-    console.log('Number of slots from previous day:', previousDaySlots.length);
-
-    if (previousDaySlots.length === 0) {
-      console.log('No slots found from the previous day');
-      return;
-    }
-
-    const newSlots = previousDaySlots.map((slot) => {
-      const { date, ...rest } = slot; // Exclude _id and date to set new values
-      const newSlotDate = new Date(parsedDate);
-      newSlotDate.setHours(
-        new Date(date).getHours(),
-        new Date(date).getMinutes(),
-        new Date(date).getSeconds(),
-        new Date(date).getMilliseconds()
-      );
-
-      return {
-        ...rest,
-        _id: new BSON.ObjectId(), // generate a new _id
-        date: newSlotDate, // set the date to the target date
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-    });
-
-    console.log('New slots:', newSlots);
-
-    await slotsCollection.insertMany(newSlots);
-    console.log('Slots copied from the previous day successfully');
-  } catch (error) {
-    console.error('Error copying slots from the previous day:', error);
-  }
-}
-//copy from last week of slots
-async function copyOneFromLastWeek(targetDate: string) {
+async function copyFromYesterday(
+  targetDate: string,
+  isSave: boolean,
+  slotsAfterDeletion: object
+) {
   const user = await getAuthenticatedUser();
   const mongodb = user.mongoClient('mongodb-atlas');
   const slotsCollection = mongodb.db('user-account').collection('Slots');
@@ -737,14 +681,14 @@ async function copyOneFromLastWeek(targetDate: string) {
   console.log('Parsed target date:', parsedDate);
 
   const previousDay = new Date(parsedDate);
-  previousDay.setDate(parsedDate.getDate() - 7);
+  previousDay.setDate(parsedDate.getDate() - 1);
   console.log('Fetching date:', previousDay);
 
   try {
     const previousDaySlotsCursor = slotsCollection.find({
       date: {
         $gte: new Date(previousDay.setHours(0, 0, 0, 0)),
-        $lt: new Date(previousDay.setHours(23, 59, 59, 999)),
+        $lt: new Date(parsedDate.setHours(0, 0, 0, 0)),
       },
     });
 
@@ -757,18 +701,170 @@ async function copyOneFromLastWeek(targetDate: string) {
       return;
     }
 
-    const newSlots = previousDaySlots.map((slot) => ({
-      ...slot,
-      _id: new BSON.ObjectId(),
-      date: parsedDate,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }));
+    const existingSlotsCursor = await slotsCollection.find({
+      date: {
+        $gte: new Date(parsedDate.setHours(0, 0, 0, 0)),
+        $lt: new Date(parsedDate.setHours(23, 59, 59, 999)),
+      },
+    });
 
-    await slotsCollection.insertMany(newSlots);
-    console.log('Slots copied from the previous day successfully');
+    const existingSlots = await existingSlotsCursor;
+    const existingSlotNos = new Set(existingSlots.map((slot) => slot.slotNo));
+
+    let highestSlotNo = Math.max(...Array.from(existingSlotNos)) || 0;
+
+    // Convert slotsAfterDeletion from frontend to a Set for quick lookup
+    const slotsAfterDeletionSet = new Set(
+      slotsAfterDeletion.map((slot) => slot._id.toString())
+    );
+
+    const newSlots = previousDaySlots
+      .map((slot) => {
+        const { _id, date, slotNo, ...rest } = slot;
+
+        // If the slot is deleted in frontend, skip it
+        if (!slotsAfterDeletionSet.has(_id.toString())) {
+          return null;
+        }
+
+        // Check for duplicates
+        if (existingSlotNos.has(slotNo)) {
+          console.log(
+            `Skipping slot with duplicate slotNo: ${slotNo} for date: ${parsedDate}`
+          );
+          return null;
+        }
+
+        const newSlotDate = new Date(parsedDate);
+        newSlotDate.setHours(
+          new Date(date).getHours(),
+          new Date(date).getMinutes(),
+          new Date(date).getSeconds(),
+          new Date(date).getMilliseconds()
+        );
+
+        return {
+          ...rest,
+          _id: new BSON.ObjectId(),
+          date: newSlotDate,
+          slotNo: ++highestSlotNo,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+      })
+      .filter((slot) => slot !== null);
+
+    console.log('New slots:', newSlots);
+
+    if (newSlots.length > 0) {
+      if (isSave) {
+        await slotsCollection.insertMany(newSlots);
+        console.log('Slots inserted from the previous day successfully');
+        return newSlots;
+      } else {
+        console.log('Slots copied from the previous day successfully');
+        return newSlots;
+      }
+    } else {
+      console.log('No new slots to insert');
+    }
   } catch (error) {
     console.error('Error copying slots from the previous day:', error);
+  }
+}
+//copy from last week of slots
+async function copyOneFromLastWeek(targetDate: string, isSave: boolean) {
+  const user = await getAuthenticatedUser();
+  const mongodb = user.mongoClient('mongodb-atlas');
+  const slotsCollection = mongodb.db('user-account').collection('Slots');
+
+  const parsedDate = parseDateToUTC(targetDate);
+  console.log('Parsed target date:', parsedDate);
+
+  const seventhDayBack = new Date(parsedDate);
+  seventhDayBack.setDate(parsedDate.getDate() - 7);
+  console.log('Fetching date:', seventhDayBack);
+
+  try {
+    const previousDaySlotsCursor = slotsCollection.find({
+      date: {
+        $gte: new Date(seventhDayBack.setHours(0, 0, 0, 0)),
+        $lt: new Date(seventhDayBack.setHours(23, 59, 59, 999)),
+      },
+    });
+
+    const previousDaySlots = await previousDaySlotsCursor;
+    console.log('Slots from the seventh day back:', previousDaySlots);
+    console.log(
+      'Number of slots from the seventh day back:',
+      previousDaySlots.length
+    );
+
+    if (previousDaySlots.length === 0) {
+      console.log('No slots found from the seventh day back');
+      return;
+    }
+
+    const existingSlotsCursor = slotsCollection.find({
+      date: {
+        $gte: new Date(parsedDate.setHours(0, 0, 0, 0)),
+        $lt: new Date(parsedDate.setHours(23, 59, 59, 999)),
+      },
+    });
+
+    const existingSlots = await existingSlotsCursor;
+    const existingSlotNos = existingSlots.map((slot) => slot.slotNo);
+    const highestSlotNo = Math.max(...existingSlotNos, 0);
+
+    let nextSlotNo = highestSlotNo + 1;
+
+    const newSlots = previousDaySlots
+      .map((slot) => {
+        const { date, slotNo, ...rest } = slot;
+
+        // Check for duplicates
+        if (existingSlotNos.includes(slotNo)) {
+          console.log(
+            `Skipping slot with duplicate slotNo: ${slotNo} for date: ${parsedDate}`
+          );
+          return null;
+        }
+
+        const newSlotDate = new Date(parsedDate);
+        newSlotDate.setHours(
+          new Date(date).getHours(),
+          new Date(date).getMinutes(),
+          new Date(date).getSeconds(),
+          new Date(date).getMilliseconds()
+        );
+
+        return {
+          ...rest,
+          _id: new BSON.ObjectId(),
+          date: newSlotDate,
+          slotNo: nextSlotNo++,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isDeleted: rest.isDeleted !== undefined ? rest.isDeleted : false,
+        };
+      })
+      .filter((slot) => slot !== null);
+
+    console.log('New slots:', newSlots);
+
+    if (newSlots.length > 0) {
+      if (isSave) {
+        await slotsCollection.insertMany(newSlots);
+        console.log('Slots inserted from the seventh day back successfully');
+        return newSlots;
+      }
+      console.log('Slots copied from the seventh day back successfully');
+      return newSlots;
+    } else {
+      console.log('No new slots to insert');
+    }
+  } catch (error) {
+    console.error('Error copying slots from the seventh day back:', error);
   }
 }
 //edit Appointment by Slot No
@@ -896,6 +992,36 @@ async function edit_App_Slot_No(AID: string, UpdSlotNo: number, value: string) {
     console.log('Error while updating Appointment by Slot No ', err);
   }
 }
+async function deleteAppoitment(id: string) { 
+  try {
+    const user = await getAuthenticatedUser();
+    const mongodb = user.mongoClient('mongodb-atlas');
+    const appoitmentCollection = mongodb
+      .db('user-account')
+      .collection('appointmetnt');
+
+    const objectId = new BSON.ObjectId(id);
+    const result = await appoitmentCollection.findOne({ _id: objectId });
+
+    if (!result) {
+      toast.error('Appoitment not found');
+      return;
+    }
+    console.log('Appoitment:', result);
+
+    result.isDeleted = true;
+    const updateResult = await appoitmentCollection.updateOne(
+      { _id: objectId },
+      { $set: { isDeleted: true } }
+    );
+    if (updateResult.modifiedCount === 1) {
+      toast.success('Appoitment deleted successfully.');
+    }
+  } catch (error) {
+    console.error('Error while performing deleteAppoitment function:', error);
+    throw error;
+  }
+}
 export {
   createUser,
   searchUser,
@@ -917,4 +1043,5 @@ export {
   copyFromLastWeek,
   copyFromYesterday,
   copyOneFromLastWeek,
+  deleteAppoitment,
 };

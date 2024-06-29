@@ -8,6 +8,7 @@ import { Button } from '@mui/material';
 import { displayContacts } from '../services/realmServices';
 import { User } from '../services/types';
 import Loader from '../components/Loader';
+import { StyledParagraph } from '../components/StyledParagraph';
 
 const Content = styled.div`
   font-family: Helvetica;
@@ -18,18 +19,6 @@ const Content = styled.div`
   margin-left: 67px;
   text-transform: none;
   color: #000;
-`;
-const StyledParagraph = styled.p`
-  font-family: Helvetica;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 13.22px;
-  text-transform: none;
-  color: #8b9195;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 50vh;
 `;
 
 export default function Notes() {
@@ -48,7 +37,6 @@ export default function Notes() {
       setLoading(false);
       if (data == null) return;
       setResult(data);
-      console.log(data);
     }
     fetchContacts();
   }, []);
@@ -58,7 +46,7 @@ export default function Notes() {
   }
 
   if (!result.length) {
-    return <StyledParagraph>No Results Found</StyledParagraph>;
+    return <StyledParagraph height='50vh'>No Results Found</StyledParagraph>;
   }
 
   return (
@@ -67,7 +55,7 @@ export default function Notes() {
         <Row key={index} style={{ marginBottom: -30 }}>
           <Button sx={{ width: '100%' }}>
             <Row style={{ cursor: 'pointer', width: '100%' }}>
-              <Link to={`/chatpage/${item.name}`}>
+              <Link to={`/chatpage/${item._id}`}>
                 <Row type="vertical">
                   <Row>
                     <UserAvatar name={item.name} mobile={item.phone} />

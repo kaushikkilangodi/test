@@ -24,3 +24,4 @@ export interface User {
   name: string;
   upiId: string[]; // Assuming upiId is an array of strings
 }
+

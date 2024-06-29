@@ -3,18 +3,27 @@ import { IoClose, IoSaveOutline } from 'react-icons/io5';
 import Row from '../../components/Row';
 import { Button, IconButton } from '@mui/material';
 import styled from 'styled-components';
-import { copyFromYesterday, copyOneFromLastWeek } from '../../services/realmServices';
+import {
+  copyFromYesterday,
+  copyOneFromLastWeek,
+} from '../../services/realmServices';
+import { CopiedSlot } from './Slots';
 
 type ButtonName = 'yesterday' | 'lastWeek' | '';
-type prop = {
+type Prop = {
   date: string;
   fetch: (date: string) => void;
+  onCopy: (slots: CopiedSlot[]) => void;
+  onClear: () => void;
+  save:object
 };
+
 const ButtonContainer = styled.div`
   display: flex;
   align-items: center;
   margin-right: 10px;
 `;
+
 const responsiveButtonStyle = {
   fontSize: '12px',
   marginLeft: '2px',
@@ -37,29 +46,44 @@ const responsiveButtonStyle = {
     padding: '5px',
   },
 };
- 
-export default function CopySlots({ date, fetch }: prop) {
-  const [activeButton, setActiveButton] = useState('');
 
-  const handleButtonClick = (buttonName: ButtonName) => {
+export default function CopySlots({ date, fetch, onCopy, onClear,save }: Prop) {
+  const [activeButton, setActiveButton] = useState<ButtonName>('');
+console.log('save',save);
+
+  const handleButtonClick = async (buttonName: ButtonName) => {
     setActiveButton(buttonName);
-  };
-  const handleSave = async () => {
-    if (activeButton === 'yesterday') {
-      // console.log('Copy from Yesterday');
-      await copyFromYesterday(date);
-      fetch(date);
-      setActiveButton('');
-    } else if (activeButton === 'lastWeek') {
-      // console.log('Copy from lastWeek');
-      await copyOneFromLastWeek(date);
-      fetch(date);
-      setActiveButton('');
+    if (buttonName === 'yesterday') {
+      const copiedData = await copyFromYesterday(date, false,[{}]);
+      console.log('cc',copiedData);
+      
+      onCopy(copiedData ?? []); 
+    } else if (buttonName === 'lastWeek') {
+      const copiedData = await copyOneFromLastWeek(date,false);
+      // console.log(copiedData2);
+      onCopy(copiedData ?? []);
+      
     }
   };
+
+  const handleSave = async () => {
+    if (activeButton === 'yesterday') {
+
+      await copyFromYesterday(date, true,save);
+      fetch(date);
+    } else if (activeButton === 'lastWeek') {
+      await copyOneFromLastWeek(date,true);
+      fetch(date);
+    }
+    setActiveButton('');
+    onClear();
+  };
+
   const handleCancel = () => {
     setActiveButton('');
+    onClear();
   };
+
   const buttonStyle =
     activeButton === 'lastWeek' || activeButton === 'yesterday'
       ? {
@@ -74,6 +98,7 @@ export default function CopySlots({ date, fetch }: prop) {
           padding: '5px',
         }
       : responsiveButtonStyle;
+
   return (
     <>
       <Row
@@ -130,7 +155,6 @@ export default function CopySlots({ date, fetch }: prop) {
               }}
               onClick={handleCancel}
             >
-              {' '}
               <IoClose />
             </IconButton>
           </ButtonContainer>

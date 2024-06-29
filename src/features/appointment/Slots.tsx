@@ -14,6 +14,7 @@ import {
   displaySlots,
   editSlots,
 } from '../../services/realmServices';
+import { StyledParagraph } from '../../components/StyledParagraph';
 
 const NavigationContainer = styled.div`
   background: #5a9eee3d;
@@ -38,12 +39,21 @@ export interface Slot {
   isDirty: boolean;
   date: string;
 }
+export interface CopiedSlot {
+  slotNo: number;
+  _id: string;
+  slotTime: string;
+  maxPeople: number;
+  date: string;
+}
 
 export default function Slots() {
   const [isHoliday, setIsHoliday] = useState<boolean>(false);
   const [formattedDate, setFormattedDate] = useState<string>('');
   const [slots, setSlots] = useState<Slot[]>([]);
-
+  const [copiedSlots, setCopiedSlots] = useState<Slot[]>([]); 
+  const [copySlotButton, setCopySlotButton] = useState(true);
+// console.log('🔥🔥🔥🔥🔥', copiedSlots);
   useEffect(() => {
     const initializeSlots = async () => {
       const selectedDate = localStorage.getItem('selectedDate');
@@ -80,19 +90,12 @@ export default function Slots() {
               date: slot.date,
             }))
           : [];
-      if (fetchedSlots.length === 0) {
-        const newSlot: Slot = {
-          id: 1,
-          ObjectID: '',
-          time: '',
-          people: 1,
-          isDirty: true,
-          date: date,
-        };
-        setSlots([newSlot]);
-      } else {
-        setSlots(fetchedSlots);
-      }
+
+      setSlots(fetchedSlots);
+      // Set copySlotButton to true if fetchedSlots length is 0
+      console.log('fetchedSlots', fetchedSlots.length);
+      
+      setCopySlotButton(fetchedSlots.length === 0 ? true : false);
     } catch (error) {
       console.error('Error fetching slots:', error);
       toast.error('Failed to fetch slots');
@@ -180,6 +183,7 @@ export default function Slots() {
         setSlots(updatedSlots);
       }
       await fetchSlots(formattedDate); // Refresh slots after saving
+      setCopiedSlots([]); // Clear copied slots after save
     } catch (error) {
       console.error('Error saving slot:', error);
       toast.error('Failed to save slot');
@@ -188,41 +192,48 @@ export default function Slots() {
 
   const handleDeleteSlot = async (ObjectID: string) => {
     try {
-      if (!ObjectID) {
+      if (copiedSlots.length > 0) {
+        const filteredSlots = copiedSlots.filter(
+          (slot) => slot.ObjectID !== ObjectID
+        );
+        setCopiedSlots(filteredSlots);
+        toast.success('Slot deleted successfully');
+        setTimeout(() => {
+          const reorderedSlots = filteredSlots.map((slot, index) => ({
+            ...slot,
+            id: index + 1,
+          }));
+          setCopiedSlots(reorderedSlots);
+          console.log('timeout');
+        }, 100);
+      }
+      if (ObjectID && copiedSlots.length === 0) {
+        await deleteSlot(ObjectID);
+        const newSlots = slots.filter((slot) => slot.ObjectID !== ObjectID);
+        setSlots(newSlots);
+        // Check if there are no slots left and set copySlotButton to true
+        if (newSlots.length === 0) {
+          setCopySlotButton(true);
+        }
+      } else {
         // If ObjectID is undefined, it means this is a newly added empty slot
         const deleteEmptySlot = slots.filter(
           (slot) => slot.ObjectID !== ObjectID
         );
         setSlots(deleteEmptySlot);
-      } else {
-        await deleteSlot(ObjectID);
-        const newSlots = slots.filter((slot) => slot.ObjectID !== ObjectID);
-        if (newSlots.length > 0) {
-          setSlots(newSlots);
-        } else {
-          setSlots([
-            {
-              id: 1,
-              ObjectID: '',
-              time: '',
-              people: 1,
-              isDirty: true,
-              date: formattedDate,
-            },
-          ]);
+ 
+        if (deleteEmptySlot.length === 0) {
+          setCopySlotButton(true);
         }
-        // toast.success('Slot deleted successfully');
-        fetchSlots(formattedDate);
       }
     } catch (error) {
       console.error('Error deleting slot:', error);
       toast.error('Failed to delete the slot');
     }
   };
-
   const addSlot = async () => {
     const lastSlot = slots[slots.length - 1];
-    if (lastSlot.isDirty) {
+    if (lastSlot && lastSlot.isDirty) {
       toast.error('Please save the slot');
       return;
     }
@@ -237,6 +248,7 @@ export default function Slots() {
     };
 
     setSlots([...slots, newSlot]);
+    setCopySlotButton(false);
   };
 
   const updateFormattedDate = (newDate: Date) => {
@@ -256,6 +268,28 @@ export default function Slots() {
     const currentDate = new Date(formattedDate);
     currentDate.setDate(currentDate.getDate() - 1);
     updateFormattedDate(currentDate);
+  };
+
+  const handleCopySlots = (copiedData: CopiedSlot[]) => {
+    console.log('copiedData', copiedData);
+    // console.log('🔥🔥🔥🔥🔥', copiedSlots);
+    const copied =
+      copiedData && copiedData.length > 0
+        ? copiedData.map((slot) => ({
+            id: slot.slotNo,
+            ObjectID: slot._id,
+            time: slot.slotTime,
+            people: slot.maxPeople,
+            isDirty: false,
+            date: slot.date,
+          }))
+        : [];
+    setCopiedSlots(copied);
+    
+  };
+
+  const handleClearCopiedSlots = () => {
+    setCopiedSlots([]);
   };
 
   return (
@@ -285,47 +319,58 @@ export default function Slots() {
             Holiday <CustomizedSwitch onChange={handleHolidayChange} />
           </Row>
         </Row>
-        <CopySlots date={formattedDate} fetch={fetchSlots}/>
 
         {!isHoliday && (
           <>
-            {slots.map((slot) => (
-              <SlotCard
-                key={slot.id}
-                slot={slot}
-                slots={slots}
-                handleTimeChange={handleTimeChange}
-                handlePeopleChange={handlePeopleChange}
-                saveSlot={saveSlot}
-                handleDeleteSlot={handleDeleteSlot}
+            {copySlotButton && (
+              <CopySlots
+                date={formattedDate}
+                fetch={fetchSlots}
+                onCopy={handleCopySlots}
+                onClear={handleClearCopiedSlots}
+                save={copiedSlots}
               />
-            ))}
+            )}
+            {(copiedSlots.length > 0 ? copiedSlots : slots).length > 0 ? (
+              (copiedSlots.length > 0 ? copiedSlots : slots).map((slot) => (
+                <SlotCard
+                  key={slot.id}
+                  slot={slot}
+                  slots={slots}
+                  handleTimeChange={handleTimeChange}
+                  handlePeopleChange={handlePeopleChange}
+                  saveSlot={saveSlot}
+                  handleDeleteSlot={handleDeleteSlot}
+                />
+              ))
+            ) : (
+              <StyledParagraph height='20vh'>Empty slots</StyledParagraph>
+            )}
           </>
         )}
         <Row $contentposition="center">
-          {!isHoliday && slots.length < 9 && (
-            <Button
-              variant="outlined"
-              sx={{
-                color: 'white',
-                backgroundColor: '#5A9EEE',
-                fontWeight: '600',
-                font: 'Helvetica',
-                textTransform: 'none',
-                alignItems: 'center',
-                fontSize: '22px',
-                borderRadius: '12px',
-                width: '103px',
-                height: '45px',
-                border: '2px',
-                boxShadow: ' 0 4px 4px 0 rgba(0, 0, 0, 0.25)',
-                ':hover': { backgroundColor: '#5A9EEE', color: 'white' },
-              }}
-              onClick={addSlot}
-            >
-              Add
-            </Button>
-          )}
+          <Button
+            variant="outlined"
+            sx={{
+              color: 'white',
+              backgroundColor: '#5A9EEE',
+              fontWeight: '600',
+              font: 'Helvetica',
+              textTransform: 'none',
+              alignItems: 'center',
+              fontSize: '22px',
+              borderRadius: '12px',
+              marginTop: '15px',
+              width: '103px',
+              height: '45px',
+              border: '2px',
+              boxShadow: ' 0 4px 4px 0 rgba(0, 0, 0, 0.25)',
+              ':hover': { backgroundColor: '#5A9EEE', color: 'white' },
+            }}
+            onClick={addSlot}
+          >
+            Add
+          </Button>
         </Row>
       </Row>
     </>

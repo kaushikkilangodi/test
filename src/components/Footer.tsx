@@ -13,7 +13,7 @@ const StyledBottomNav = styled(BottomNavigation)(() => ({
   bottom: 0,
   left: '50%',
   transform: 'translate(-50%)',
-  boxShadow: '0 -2px rgba(0, 0, 0, 0.1)',
+  boxShadow: '0 -2px rgba(98, 27, 27, 0.1)',
   zIndex: 1000, // Ensure the footer is always on top
 }));
 
